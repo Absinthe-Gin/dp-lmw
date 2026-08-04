@@ -1,0 +1,30 @@
+import Link from "next/link";
+
+export default function HomePage() {
+  return (
+    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl font-semibold sm:text-3xl">Kỷ niệm của bạn</h1>
+          <p className="mt-1.5 max-w-[46ch] text-sm text-ink-muted">
+            Toàn bộ ảnh và video được lưu chung — ai cũng xem và thêm được, chỉ quản trị viên mới xóa.
+          </p>
+        </div>
+        <Link href="/upload" className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-strong">
+          + Tải lên
+        </Link>
+      </div>
+
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row">
+        <Link href="/albums" className="flex-1 rounded-lg border border-border bg-surface px-5 py-4 hover:border-accent">
+          <p className="text-sm font-semibold">Xem album</p>
+          <p className="mt-1 text-xs text-ink-muted">Gộp thủ công hoặc tự động theo ngày/vị trí chụp</p>
+        </Link>
+        <Link href="/upload" className="flex-1 rounded-lg border border-border bg-surface px-5 py-4 hover:border-accent">
+          <p className="text-sm font-semibold">Tải ảnh/video</p>
+          <p className="mt-1 text-xs text-ink-muted">Không cần đăng nhập, kéo thả nhiều tệp cùng lúc</p>
+        </Link>
+      </div>
+    </main>
+  );
+}

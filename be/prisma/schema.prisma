@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// No User model: this is a shared public vault, not per-account storage.
+// Viewing/uploading/editing needs no login; only deletion is admin-gated
+// (see be/src/middleware/requireAdmin.ts).
+model Media {
+  id           String    @id @default(cuid())
+  type         MediaType
+  storageKey   String    @unique // object key in bucket (original)
+  thumbnailKey String? // object key for generated thumbnail
+  width        Int?
+  height       Int?
+  durationSec  Int? // for video
+  takenAt      DateTime? // from EXIF, falls back to uploadedAt
+  latitude     Float?
+  longitude    Float?
+  uploadedAt   DateTime  @default(now())
+
+  albums AlbumMedia[]
+
+  @@index([takenAt])
+  @@index([uploadedAt]) // GET /api/media orders by this
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+model Album {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  coverKey    String?
+  source      AlbumSource @default(MANUAL)
+  createdAt   DateTime    @default(now())
+
+  media AlbumMedia[]
+
+  @@index([createdAt]) // GET /api/albums orders by this
+}
+
+enum AlbumSource {
+  MANUAL // created by hand
+  AUTO_DATE // auto-grouped by capture date range
+  AUTO_LOCATION // auto-grouped by GPS proximity
+}
+
+model AlbumMedia {
+  albumId String
+  mediaId String
+  addedAt DateTime @default(now())
+
+  album Album @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@id([albumId, mediaId])
+  @@index([mediaId]) // "is this media in any album" lookups (auto-generate's ungrouped filter)
+}

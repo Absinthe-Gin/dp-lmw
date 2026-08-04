@@ -1,0 +1,11 @@
+{
+  "name": "memory-vault",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": ["fe", "be", "ai", "packages/*"],
+  "scripts": {
+    "dev:fe": "npm run dev -w fe",
+    "dev:be": "npm run dev -w be",
+    "build": "npm run build -w ai && npm run build -w packages/shared && npm run build -w be && npm run build -w fe"
+  }
+}
