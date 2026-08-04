@@ -3,7 +3,7 @@ services:
     name: dp-lmw-be
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build -w ai -w packages/shared -w be
+    buildCommand: npm install && npm run build -w ai -w packages/shared && npm run -w be prisma:generate && npm run build -w be
     startCommand: npm run start -w be
     envVars:
       - key: NODE_VERSION

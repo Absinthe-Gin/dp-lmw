@@ -11,14 +11,16 @@ DP LMW (internal package name still `memory-vault`): a photo/video storage syste
 ```
 npm install                                    # installs all workspaces
 npm run build -w ai -w packages/shared          # build internal packages (do this before running be/)
-npm run -w be prisma:generate                   # regenerate Prisma client after schema.prisma changes
+npm run -w be prisma:generate                   # regenerate Prisma client after schema.prisma changes — see warning below
 npm run -w be prisma:migrate                    # create/apply a migration (interactive — see Database section if it refuses)
 npm run -w be prisma:seed                       # populate 4 sample photos across 2 date clusters (skips if seed data already present)
 npm run -w be prisma:studio                     # inspect the DB
 npm run dev:be                                  # backend on :4000 (tsx watch)
 npm run dev:fe                                  # frontend on :3000 (next dev)
-npm run build                                   # builds ai -> shared -> be -> fe in that order (dependency order matters)
+npm run build                                   # ai -> shared -> prisma generate -> be -> fe, in that order
 ```
+
+**`prisma generate` is not optional and npm doesn't run it for you.** `be`'s TypeScript code (`be/src/routes/*.ts`) relies on Prisma's *generated* types (`db.album.findUnique(...)` returning a properly-shaped `Album & { media: ... }`, not `any`). On a machine/CI environment that has never run it, `@prisma/client` is an unusable stub and `tsc` fails with things like `Parameter 'am' implicitly has an 'any' type` or `Property 'thumbnailKey' does not exist on type 'MediaPoint'` — this is exactly what happened on the first Render deploy, whose `buildCommand` built `be` without generating first; fixed by adding `npm run -w be prisma:generate` into both `render.yaml`'s `buildCommand` and the root `package.json`'s `build` script, ahead of `npm run build -w be`. `npm install` alone does not reliably trigger it in this workspace layout — don't assume a fresh environment has a working Prisma Client just because dependencies installed cleanly.
 
 No test suite exists yet. There is no root lint/typecheck script — `ai` and `packages/shared` each expose `typecheck`/`build` via `tsc`; `fe` has `npm run -w fe lint` (eslint-config-next).
 
