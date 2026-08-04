@@ -2,6 +2,8 @@
 
 Hệ thống lưu trữ ảnh/video kỷ niệm dùng chung (không cần tài khoản), hỗ trợ gộp album thủ công và tự động (theo ngày/địa điểm chụp). Xem, tải lên, chỉnh sửa album không cần đăng nhập — chỉ **xóa** mới yêu cầu đăng nhập quản trị.
 
+**Đang chạy thật**: https://dp-lmw-fe.vercel.app (backend: https://dp-lmw-be.onrender.com) — repo: https://github.com/Absinthe-Gin/dp-lmw
+
 Monorepo npm workspaces, tách riêng frontend / backend / logic AI. Chi tiết kiến trúc, quy ước code, lệnh chạy: xem [CLAUDE.md](./CLAUDE.md).
 
 ## Cấu trúc thư mục
@@ -40,7 +42,11 @@ Bản thiết kế giao diện (tông xanh dương/trắng, 4 màn hình chính)
 
 ## Deploy
 
-- **fe/**: Vercel (domain riêng trỏ vào đây)
-- **be/**: Railway/Render/Fly.io (chạy Node server dài hạn, không phù hợp serverless do multer/sharp)
-- **DB**: Supabase Postgres (đã dùng sẵn)
-- **Storage**: Supabase Storage (đã dùng sẵn); có thể đổi sang Cloudflare R2 sau nếu vượt free tier (1GB storage / 5GB băng thông mỗi tháng) — cùng code, chỉ đổi `STORAGE_*` trong env
+Đã deploy thật, miễn phí hoàn toàn:
+
+- **fe/**: Vercel — https://dp-lmw-fe.vercel.app (Root Directory = `fe`, env `NEXT_PUBLIC_API_URL` trỏ vào Render)
+- **be/**: Render free web service — https://dp-lmw-be.onrender.com (deploy qua `render.yaml` ở gốc repo, tự sleep sau 15 phút không hoạt động, request đầu chậm ~30-50s sau đó)
+- **DB**: Supabase Postgres
+- **Storage**: Supabase Storage (S3-compatible); có thể đổi sang Cloudflare R2 sau nếu vượt free tier — cùng code, chỉ đổi `STORAGE_*` trong env
+
+Push lên nhánh `main` sẽ tự động deploy lại cả hai. Riêng khi sửa `buildCommand` trong `render.yaml`, cần vào Render dashboard bấm **Manual Sync** ở trang Blueprint (không phải Manual Deploy ở trang service) để áp dụng — chi tiết xem CLAUDE.md.
