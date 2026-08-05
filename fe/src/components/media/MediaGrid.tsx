@@ -5,7 +5,14 @@ import type { MediaDTO } from "@memory-vault/shared";
 import MediaCard from "./MediaCard";
 import MediaLightbox from "./MediaLightbox";
 
-export default function MediaGrid({ items }: { items: MediaDTO[] }) {
+export default function MediaGrid({
+  items,
+  onRemoveFromAlbum,
+}: {
+  items: MediaDTO[];
+  /** Passed only from an album detail page — renders a "remove from album" action per card. */
+  onRemoveFromAlbum?: (id: string) => void;
+}) {
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const visible = items.filter((item) => !deletedIds.has(item.id));
@@ -23,6 +30,7 @@ export default function MediaGrid({ items }: { items: MediaDTO[] }) {
             media={item}
             onOpen={() => setOpenIndex(i)}
             onDeleted={(id) => setDeletedIds((prev) => new Set(prev).add(id))}
+            onRemoveFromAlbum={onRemoveFromAlbum ? () => onRemoveFromAlbum(item.id) : undefined}
           />
         ))}
       </div>

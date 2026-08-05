@@ -11,10 +11,13 @@ export default function MediaCard({
   media,
   onOpen,
   onDeleted,
+  onRemoveFromAlbum,
 }: {
   media: MediaDTO;
   onOpen?: () => void;
   onDeleted?: (id: string) => void;
+  /** Only passed from an album detail page — detaches from this album without deleting the media itself. */
+  onRemoveFromAlbum?: () => void;
 }) {
   const [url, setUrl] = useState<string | null>(null);
   const router = useRouter();
@@ -48,6 +51,17 @@ export default function MediaCard({
     onDeleted?.(media.id);
   }
 
+  async function handleRemoveFromAlbum(e: React.MouseEvent) {
+    e.stopPropagation();
+    const ok = await confirm({
+      title: "Gỡ khỏi album này?",
+      description: "Ảnh/video vẫn còn trong hệ thống, chỉ không thuộc album này nữa.",
+      confirmLabel: "Gỡ",
+    });
+    if (!ok) return;
+    onRemoveFromAlbum?.();
+  }
+
   return (
     <div
       className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg border border-border bg-surface2"
@@ -66,14 +80,27 @@ export default function MediaCard({
           ▶ video
         </span>
       )}
-      <button
-        type="button"
-        onClick={handleDelete}
-        aria-label="Xóa"
-        className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-md bg-black/55 text-xs text-white opacity-80 transition-opacity hover:bg-danger md:opacity-0 md:group-hover:opacity-100"
-      >
-        ×
-      </button>
+      <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-80 transition-opacity md:opacity-0 md:group-hover:opacity-100">
+        {onRemoveFromAlbum && (
+          <button
+            type="button"
+            onClick={handleRemoveFromAlbum}
+            aria-label="Gỡ khỏi album"
+            title="Gỡ khỏi album"
+            className="flex h-7 w-7 items-center justify-center rounded-md bg-black/55 text-xs text-white hover:bg-accent-strong"
+          >
+            ⤬
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={handleDelete}
+          aria-label="Xóa"
+          className="flex h-7 w-7 items-center justify-center rounded-md bg-black/55 text-xs text-white hover:bg-danger"
+        >
+          ×
+        </button>
+      </div>
     </div>
   );
 }
