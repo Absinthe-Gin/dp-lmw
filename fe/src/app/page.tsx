@@ -1,6 +1,43 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import type { AlbumDTO, MediaDTO } from "@memory-vault/shared";
+import AlbumGrid from "@/components/albums/AlbumGrid";
+import MediaGrid from "@/components/media/MediaGrid";
+import { api } from "@/lib/api-client";
+import { getRecentIds } from "@/lib/recentlyViewed";
+
+const RECENT_MEDIA_LIMIT = 8;
+const RECENT_ALBUMS_LIMIT = 4;
 
 export default function HomePage() {
+  const [recentMedia, setRecentMedia] = useState<MediaDTO[]>([]);
+  const [recentAlbums, setRecentAlbums] = useState<AlbumDTO[]>([]);
+
+  useEffect(() => {
+    const recentMediaIds = getRecentIds("media");
+    const recentAlbumIds = getRecentIds("album");
+    if (recentMediaIds.length === 0 && recentAlbumIds.length === 0) return;
+
+    Promise.all([api.get<MediaDTO[]>("/api/media"), api.get<AlbumDTO[]>("/api/albums")]).then(([media, albums]) => {
+      const mediaById = new Map(media.map((m) => [m.id, m]));
+      const albumById = new Map(albums.map((a) => [a.id, a]));
+      setRecentMedia(
+        recentMediaIds
+          .map((id) => mediaById.get(id))
+          .filter((m): m is MediaDTO => Boolean(m))
+          .slice(0, RECENT_MEDIA_LIMIT)
+      );
+      setRecentAlbums(
+        recentAlbumIds
+          .map((id) => albumById.get(id))
+          .filter((a): a is AlbumDTO => Boolean(a))
+          .slice(0, RECENT_ALBUMS_LIMIT)
+      );
+    });
+  }, []);
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
@@ -31,6 +68,20 @@ export default function HomePage() {
           <p className="mt-1 text-xs text-ink-muted">Không cần đăng nhập, kéo thả nhiều tệp cùng lúc</p>
         </Link>
       </div>
+
+      {recentAlbums.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-3 text-sm font-semibold text-ink-muted">Album xem gần đây</h2>
+          <AlbumGrid albums={recentAlbums} />
+        </section>
+      )}
+
+      {recentMedia.length > 0 && (
+        <section>
+          <h2 className="mb-3 text-sm font-semibold text-ink-muted">Ảnh &amp; video xem gần đây</h2>
+          <MediaGrid items={recentMedia} />
+        </section>
+      )}
     </main>
   );
 }

@@ -4,12 +4,17 @@ import { useEffect, useState } from "react";
 import type { AlbumDetailDTO } from "@memory-vault/shared";
 import MediaGrid from "@/components/media/MediaGrid";
 import { api } from "@/lib/api-client";
+import { recordView } from "@/lib/recentlyViewed";
 
 export default function AlbumDetailPage({ params }: { params: { id: string } }) {
   const [album, setAlbum] = useState<AlbumDetailDTO | null>(null);
 
   useEffect(() => {
     api.get<AlbumDetailDTO>(`/api/albums/${params.id}`).then(setAlbum);
+  }, [params.id]);
+
+  useEffect(() => {
+    recordView("album", params.id);
   }, [params.id]);
 
   if (!album) return null;

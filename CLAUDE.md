@@ -75,6 +75,9 @@ Four workspaces, each with a distinct responsibility. Reading only one is usuall
 ### Media display flow
 Object storage is private; nothing is served by public URL. List/detail endpoints return DTOs with `thumbnailUrl: null`, and `fe/src/components/media/MediaCard.tsx` separately calls `GET /api/media/:id/url` to fetch a short-lived signed URL per item. Don't try to shortcut this by adding public bucket URLs to the DTO. Pass `?original=1` on that same endpoint to get the full-size `storageKey` instead of `thumbnailKey` — `MediaLightbox.tsx` uses this for its detail view; grid thumbnails don't.
 
+### "Recently viewed" is client-side only, no server concept of it
+`fe/src/lib/recentlyViewed.ts` records a `(kind, id, viewedAt)` entry to `localStorage` whenever `MediaLightbox` opens an item or an album detail page loads — there's no accounts, so "recently viewed" can only ever mean "on this browser." The home page (`fe/src/app/page.tsx`) reads those ids back, cross-references them against the full `GET /api/media` / `GET /api/albums` lists (no per-id fetch endpoint exists, so this is a client-side join, fine at this app's scale), and renders "Album xem gần đây" / "Ảnh & video xem gần đây" sections — both omitted entirely on a browser with no view history yet, rather than showing an empty state.
+
 Clicking a `MediaCard` opens `MediaLightbox.tsx` (full-size image/video, metadata, prev/next, Escape/backdrop/✕ to close) — `MediaGrid.tsx` owns the open/index state and is shared by both `/media` and album detail pages, so the lightbox works in both automatically. `fe/src/app/media/page.tsx` also has a Tất cả/Ảnh/Video filter (client-side, filters the already-fetched list by `type` — no new backend query param).
 
 ### Storage driver: local vs s3

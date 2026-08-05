@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { MediaDTO } from "@memory-vault/shared";
 import { api } from "@/lib/api-client";
+import { recordView } from "@/lib/recentlyViewed";
 
 function formatMeta(media: MediaDTO): string {
   const date = new Date(media.takenAt ?? media.uploadedAt);
@@ -24,6 +25,10 @@ export default function MediaLightbox({
 }) {
   const media = items[index];
   const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    recordView("media", media.id);
+  }, [media.id]);
 
   useEffect(() => {
     setUrl(null);
