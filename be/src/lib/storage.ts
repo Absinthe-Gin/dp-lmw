@@ -2,6 +2,7 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { attachmentDisposition } from "./contentDisposition";
 
 /**
  * Two drivers: "s3" (any S3-compatible service — Supabase Storage in this
@@ -63,9 +64,7 @@ export async function getSignedDownloadUrl(
     new GetObjectCommand({
       Bucket: bucket,
       Key: key,
-      ...(downloadFilename
-        ? { ResponseContentDisposition: `attachment; filename="${downloadFilename}"` }
-        : {}),
+      ...(downloadFilename ? { ResponseContentDisposition: attachmentDisposition(downloadFilename) } : {}),
     }),
     { expiresIn: expiresInSec }
   );

@@ -5,6 +5,7 @@ import multer from "multer";
 import archiver from "archiver";
 import { db } from "../lib/db";
 import { uploadObject, deleteObject, getSignedDownloadUrl, getObjectStream } from "../lib/storage";
+import { attachmentDisposition } from "../lib/contentDisposition";
 import { createThumbnail, getImageDimensions, extractExif } from "@memory-vault/ai";
 import { requireAdmin } from "../middleware/requireAdmin";
 import { asyncHandler } from "../lib/asyncHandler";
@@ -32,7 +33,7 @@ export async function streamZip(
   items: { storageKey: string }[]
 ) {
   res.setHeader("Content-Type", "application/zip");
-  res.setHeader("Content-Disposition", `attachment; filename="${zipFilename}"`);
+  res.setHeader("Content-Disposition", attachmentDisposition(zipFilename));
 
   const archive = archiver("zip", { zlib: { level: 6 } });
   archive.on("error", (err) => {

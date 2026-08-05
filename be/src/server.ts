@@ -3,6 +3,7 @@ import path from "node:path";
 import express from "express";
 import type { ErrorRequestHandler } from "express";
 import cors from "cors";
+import { attachmentDisposition } from "./lib/contentDisposition";
 import { authRouter } from "./routes/auth";
 import { mediaRouter } from "./routes/media";
 import { albumsRouter } from "./routes/albums";
@@ -28,7 +29,7 @@ if (process.env.STORAGE_DRIVER !== "s3") {
     // under either storage driver: ?download=<name> -> Content-Disposition.
     (req, res, next) => {
       if (typeof req.query.download === "string") {
-        res.setHeader("Content-Disposition", `attachment; filename="${req.query.download}"`);
+        res.setHeader("Content-Disposition", attachmentDisposition(req.query.download));
       }
       next();
     },
