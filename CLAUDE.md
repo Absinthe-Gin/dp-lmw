@@ -91,6 +91,8 @@ Full create/read/update/delete has existed on `be/src/routes/albums.ts` since th
 
 `/albums` also has a client-side search box (magnifying-glass icon, filters the already-fetched `AlbumDTO[]` by `title.toLowerCase().includes(query)` via `useMemo`, no backend query param — consistent with the `/media` type filter) showing a "Không tìm thấy album nào khớp với ..." message when the query matches nothing.
 
+`fe/src/components/ui/ScrollToTopButton.tsx` is mounted once in `layout.tsx` (alongside `TopBar`/`ConfirmDialogProvider`), not per-page — a fixed-position "↑" button that fades in via a `window.scroll` listener once `scrollY` passes 480px and smooth-scrolls to top on click. Because it's global, any page with a long list (media grid, albums grid, etc.) gets it automatically; don't add a second one-off version to an individual page.
+
 ### Storage driver: local vs s3
 `be/src/lib/storage.ts` supports two drivers selected by `STORAGE_DRIVER`: `"local"` (writes to `be/uploads/`, served unsigned via `app.use("/files", express.static(...))` in `server.ts`, zero cloud setup — useful if working offline or Supabase is unreachable) and `"s3"` (real signed URLs, **this is what's actually configured right now**). `STORAGE_DRIVER=s3` currently points at **Supabase Storage**'s S3-compatible endpoint, not Cloudflare R2 — despite `storage.ts`'s comments mentioning R2 as an example, the live values in `be/.env` are:
 ```

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Merriweather, Open_Sans, IBM_Plex_Mono } from "next/font/google";
 import TopBar from "@/components/layout/TopBar";
 import { ConfirmDialogProvider } from "@/components/ui/ConfirmDialogProvider";
+import ScrollToTopButton from "@/components/ui/ScrollToTopButton";
 import "./globals.css";
 
 const merriweather = Merriweather({
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ConfirmDialogProvider>
           <TopBar />
           {children}
+          <ScrollToTopButton />
         </ConfirmDialogProvider>
       </body>
     </html>
