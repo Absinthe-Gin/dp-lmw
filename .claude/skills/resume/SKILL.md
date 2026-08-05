@@ -40,6 +40,7 @@ Full build: fe (Next.js UI only) / be (Express+Prisma API) / ai (pure grouping+m
 - `fe/package.json`'s own `build` script builds `packages/shared` first (`--prefix ../packages/shared`) — needed because `next build`'s type-check needs `packages/shared/dist/index.d.ts` to exist, and a platform's default Next.js build command won't build it for you.
 - Any new `groupByDate`/`groupByLocation` caller needs the `takenAt ?? uploadedAt` fallback (see CLAUDE.md) or EXIF-less uploads silently never group.
 - Delete buttons must stay visible without `:hover` on mobile (`opacity-80 md:opacity-0 md:group-hover:opacity-100` pattern) — don't revert to hover-only.
+- Every async route handler in `be/src/routes/` must be wrapped in `asyncHandler` (`be/src/lib/asyncHandler.ts`) — Express 4 doesn't catch rejected promises from async handlers, so an unwrapped one crashes the *entire* process on any DB/network hiccup (hit for real via a transient Supabase blip locally). New route = wrap it, unless it's fully sync with no DB call like `auth.ts`.
 
 ## If picking up a specific pending item
 
