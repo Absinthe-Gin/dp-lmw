@@ -27,11 +27,22 @@ function toDTO(m: Awaited<ReturnType<typeof db.media.findFirstOrThrow>>): MediaD
   };
 }
 
-// Public: anyone can view.
+// Public: anyone can view. Excludes trashed items.
 mediaRouter.get(
   "/",
   asyncHandler(async (_req, res) => {
-    const media = await db.media.findMany({ orderBy: { uploadedAt: "desc" } });
+    const media = await db.media.findMany({ where: { deletedAt: null }, orderBy: { uploadedAt: "desc" } });
+    res.json(media.map(toDTO));
+  })
+);
+
+// Admin only: view the trash. Listed here (not under /trash at the router
+// root) so it doesn't collide with the "/:id" routes below.
+mediaRouter.get(
+  "/trash/list",
+  requireAdmin,
+  asyncHandler(async (_req, res) => {
+    const media = await db.media.findMany({ where: { deletedAt: { not: null } }, orderBy: { deletedAt: "desc" } });
     res.json(media.map(toDTO));
   })
 );
@@ -82,11 +93,12 @@ mediaRouter.post(
   })
 );
 
-// Public: anyone can view.
+// Public: anyone can view. Trashed items 404 here too — once in the
+// trash, a media item is gone from every public surface, not just lists.
 mediaRouter.get(
   "/:id/url",
   asyncHandler(async (req, res) => {
-    const media = await db.media.findUnique({ where: { id: req.params.id } });
+    const media = await db.media.findFirst({ where: { id: req.params.id, deletedAt: null } });
     if (!media) return res.status(404).json({ error: "Not found" });
 
     const key = media.thumbnailKey ?? media.storageKey;
@@ -95,9 +107,55 @@ mediaRouter.get(
   })
 );
 
-// Admin only: destructive.
+// Admin only: same signed-URL lookup as /:id/url, but for trashed items —
+// lets the trash UI show a real thumbnail before an admin restores or
+// permanently deletes something, without exposing trashed content publicly.
+mediaRouter.get(
+  "/:id/trash-url",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const media = await db.media.findFirst({ where: { id: req.params.id, deletedAt: { not: null } } });
+    if (!media) return res.status(404).json({ error: "Not found" });
+
+    const key = media.thumbnailKey ?? media.storageKey;
+    const url = await getSignedDownloadUrl(key);
+    res.json({ url });
+  })
+);
+
+// Admin only. Soft delete — moves to the trash, storage/DB row kept until
+// a separate permanent-delete call. Restorable via POST /:id/restore.
 mediaRouter.delete(
   "/:id",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const media = await db.media.findUnique({ where: { id: req.params.id } });
+    if (!media) return res.status(404).json({ error: "Not found" });
+
+    await db.media.update({ where: { id: media.id }, data: { deletedAt: new Date() } });
+    res.json({ ok: true });
+  })
+);
+
+// Admin only: pull an item back out of the trash.
+mediaRouter.post(
+  "/:id/restore",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const media = await db.media.findUnique({ where: { id: req.params.id } });
+    if (!media) return res.status(404).json({ error: "Not found" });
+
+    const restored = await db.media.update({ where: { id: media.id }, data: { deletedAt: null } });
+    res.json(toDTO(restored));
+  })
+);
+
+// Admin only: actually destructive — deletes the object(s) from storage and
+// the DB row. Only reachable from the trash UI, but not enforced server-side
+// that the item must already be soft-deleted (an admin can hard-delete
+// directly if they really want to).
+mediaRouter.delete(
+  "/:id/permanent",
   requireAdmin,
   asyncHandler(async (req, res) => {
     const media = await db.media.findUnique({ where: { id: req.params.id } });

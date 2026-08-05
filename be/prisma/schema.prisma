@@ -22,11 +22,13 @@ model Media {
   latitude     Float?
   longitude    Float?
   uploadedAt   DateTime  @default(now())
+  deletedAt    DateTime? // soft delete: non-null = sitting in the trash, not purged yet
 
   albums AlbumMedia[]
 
   @@index([takenAt])
   @@index([uploadedAt]) // GET /api/media orders by this
+  @@index([deletedAt]) // trash listing / excluding trashed rows from every other query
 }
 
 enum MediaType {
@@ -41,10 +43,12 @@ model Album {
   coverKey    String?
   source      AlbumSource @default(MANUAL)
   createdAt   DateTime    @default(now())
+  deletedAt   DateTime? // soft delete: non-null = sitting in the trash, not purged yet
 
   media AlbumMedia[]
 
   @@index([createdAt]) // GET /api/albums orders by this
+  @@index([deletedAt])
 }
 
 enum AlbumSource {

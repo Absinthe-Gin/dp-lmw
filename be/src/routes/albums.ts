@@ -7,6 +7,11 @@ import type { AlbumDetailDTO, AlbumDTO, MediaDTO } from "@memory-vault/shared";
 
 export const albumsRouter = Router();
 
+// Excludes soft-deleted media from an album's nested `media` relation —
+// used both to count `mediaCount` and to build the detail response, so a
+// trashed item disappears from every album it was in immediately.
+const NOT_TRASHED_MEDIA = { where: { media: { deletedAt: null } } };
+
 function toDTO(album: { id: string; title: string; description: string | null; source: string; createdAt: Date; media: unknown[] }): AlbumDTO {
   return {
     id: album.id,
@@ -18,22 +23,40 @@ function toDTO(album: { id: string; title: string; description: string | null; s
   };
 }
 
-// Public: anyone can view.
+// Public: anyone can view. Excludes trashed albums.
 albumsRouter.get(
   "/",
   asyncHandler(async (_req, res) => {
-    const albums = await db.album.findMany({ orderBy: { createdAt: "desc" }, include: { media: true } });
+    const albums = await db.album.findMany({
+      where: { deletedAt: null },
+      orderBy: { createdAt: "desc" },
+      include: { media: NOT_TRASHED_MEDIA },
+    });
     res.json(albums.map(toDTO));
   })
 );
 
-// Public: anyone can view.
+// Admin only: view the trash.
+albumsRouter.get(
+  "/trash/list",
+  requireAdmin,
+  asyncHandler(async (_req, res) => {
+    const albums = await db.album.findMany({
+      where: { deletedAt: { not: null } },
+      orderBy: { deletedAt: "desc" },
+      include: { media: true },
+    });
+    res.json(albums.map(toDTO));
+  })
+);
+
+// Public: anyone can view. Trashed albums 404 here too.
 albumsRouter.get(
   "/:id",
   asyncHandler(async (req, res) => {
-    const album = await db.album.findUnique({
-      where: { id: req.params.id },
-      include: { media: { include: { media: true } } },
+    const album = await db.album.findFirst({
+      where: { id: req.params.id, deletedAt: null },
+      include: { media: { where: { media: { deletedAt: null } }, include: { media: true } } },
     });
     if (!album) return res.status(404).json({ error: "Not found" });
 
@@ -76,7 +99,7 @@ albumsRouter.post(
         source: "MANUAL",
         media: { create: (mediaIds ?? []).map((mediaId) => ({ mediaId })) },
       },
-      include: { media: true },
+      include: { media: NOT_TRASHED_MEDIA },
     });
 
     res.status(201).json(toDTO(album));
@@ -110,16 +133,47 @@ albumsRouter.patch(
     const album = await db.album.update({
       where: { id: req.params.id },
       data: { title, description },
-      include: { media: true },
+      include: { media: NOT_TRASHED_MEDIA },
     });
 
     res.json(toDTO(album));
   })
 );
 
-// Admin only: destructive.
+// Admin only. Soft delete — moves to the trash. Restorable via POST /:id/restore.
 albumsRouter.delete(
   "/:id",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const existing = await db.album.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: "Not found" });
+
+    await db.album.update({ where: { id: req.params.id }, data: { deletedAt: new Date() } });
+    res.json({ ok: true });
+  })
+);
+
+// Admin only: pull an album back out of the trash.
+albumsRouter.post(
+  "/:id/restore",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const existing = await db.album.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: "Not found" });
+
+    const restored = await db.album.update({
+      where: { id: req.params.id },
+      data: { deletedAt: null },
+      include: { media: true },
+    });
+    res.json(toDTO(restored));
+  })
+);
+
+// Admin only: actually destructive — deletes the album (and, via cascade,
+// its AlbumMedia rows — the underlying Media rows themselves are untouched).
+albumsRouter.delete(
+  "/:id/permanent",
   requireAdmin,
   asyncHandler(async (req, res) => {
     const existing = await db.album.findUnique({ where: { id: req.params.id } });
@@ -138,7 +192,7 @@ albumsRouter.delete(
 albumsRouter.post(
   "/auto-generate",
   asyncHandler(async (_req, res) => {
-    const ungrouped = await db.media.findMany({ where: { albums: { none: {} } } });
+    const ungrouped = await db.media.findMany({ where: { deletedAt: null, albums: { none: {} } } });
 
     // EXIF-less media (screenshots, re-exported files) has no takenAt — fall
     // back to uploadedAt so it still participates in grouping instead of

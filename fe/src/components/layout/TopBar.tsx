@@ -8,6 +8,7 @@ import { getSessionToken } from "@/lib/session";
 const NAV = [
   { href: "/", label: "Trang chủ" },
   { href: "/upload", label: "Tải lên" },
+  { href: "/media", label: "Ảnh & Video" },
   { href: "/albums", label: "Album" },
 ];
 
@@ -48,14 +49,26 @@ export default function TopBar() {
           })}
         </nav>
 
-        <Link
-          href="/admin-login"
-          className="flex items-center gap-2 whitespace-nowrap rounded-full border border-border px-2.5 py-1.5 text-xs text-ink-muted sm:px-3"
-          title={isAdmin ? "Đã đăng nhập quản trị" : "Chưa đăng nhập quản trị"}
-        >
-          <span className={`h-1.5 w-1.5 rounded-full ${isAdmin ? "bg-success" : "bg-ink-faint"}`} />
-          <span className="hidden sm:inline">{isAdmin ? "Đã đăng nhập quản trị" : "Chưa đăng nhập quản trị"}</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Link
+              href="/trash"
+              className={`whitespace-nowrap rounded-full border border-border px-3 py-1.5 text-xs font-semibold sm:px-3.5 ${
+                pathname === "/trash" ? "border-accent text-accent" : "text-ink-muted hover:text-ink"
+              }`}
+            >
+              Thùng rác
+            </Link>
+          )}
+          <Link
+            href="/admin-login"
+            className="flex items-center gap-2 whitespace-nowrap rounded-full border border-border px-2.5 py-1.5 text-xs text-ink-muted sm:px-3"
+            title={isAdmin ? "Đã đăng nhập quản trị" : "Chưa đăng nhập quản trị"}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${isAdmin ? "bg-success" : "bg-ink-faint"}`} />
+            <span className="hidden sm:inline">{isAdmin ? "Đã đăng nhập quản trị" : "Chưa đăng nhập quản trị"}</span>
+          </Link>
+        </div>
       </div>
     </header>
   );
