@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
-import { Fraunces, Public_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Merriweather, Open_Sans, IBM_Plex_Mono } from "next/font/google";
 import TopBar from "@/components/layout/TopBar";
 import "./globals.css";
 
-const fraunces = Fraunces({
+const merriweather = Merriweather({
   subsets: ["latin"],
-  weight: ["500", "600"],
+  weight: ["700", "900"],
   variable: "--font-display",
 });
 
-const publicSans = Public_Sans({
+const openSans = Open_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-body",
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="vi" className={`${fraunces.variable} ${publicSans.variable} ${plexMono.variable}`}>
+    <html lang="vi" className={`${merriweather.variable} ${openSans.variable} ${plexMono.variable}`}>
       <body className="min-h-screen bg-bg font-sans text-ink antialiased">
         <TopBar />
         {children}
