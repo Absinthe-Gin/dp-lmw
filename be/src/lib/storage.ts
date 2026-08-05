@@ -43,13 +43,46 @@ export async function uploadObject(key: string, body: Buffer, contentType: strin
   return key;
 }
 
-export async function getSignedDownloadUrl(key: string, expiresInSec = 3600) {
+export async function getSignedDownloadUrl(
+  key: string,
+  options: { expiresInSec?: number; downloadFilename?: string } = {}
+) {
+  const { expiresInSec = 3600, downloadFilename } = options;
+
   if (DRIVER === "local") {
     // No real expiry locally — fine for dev, never for prod (see note above).
-    return `${PUBLIC_BASE_URL}/files/${key}`;
+    // downloadFilename rides along as a query param — server.ts's /files
+    // middleware turns it into a Content-Disposition header so the browser
+    // saves the file instead of navigating to it, matching S3's behavior below.
+    const suffix = downloadFilename ? `?download=${encodeURIComponent(downloadFilename)}` : "";
+    return `${PUBLIC_BASE_URL}/files/${key}${suffix}`;
   }
 
-  return getSignedUrl(s3!, new GetObjectCommand({ Bucket: bucket, Key: key }), { expiresIn: expiresInSec });
+  return getSignedUrl(
+    s3!,
+    new GetObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ...(downloadFilename
+        ? { ResponseContentDisposition: `attachment; filename="${downloadFilename}"` }
+        : {}),
+    }),
+    { expiresIn: expiresInSec }
+  );
+}
+
+/**
+ * Returns the raw file body as a Node Readable — used by the zip-download
+ * routes (be/src/routes/{media,albums}.ts) to stream several objects into an
+ * archive without round-tripping through a signed URL for each one.
+ */
+export async function getObjectStream(key: string): Promise<NodeJS.ReadableStream> {
+  if (DRIVER === "local") {
+    return (await import("node:fs")).createReadStream(path.join(LOCAL_ROOT, key));
+  }
+
+  const result = await s3!.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+  return result.Body as NodeJS.ReadableStream;
 }
 
 export async function deleteObject(key: string) {

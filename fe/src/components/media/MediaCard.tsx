@@ -6,18 +6,24 @@ import { useRouter, usePathname } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { getSessionToken } from "@/lib/session";
 import { useConfirm } from "@/components/ui/ConfirmDialogProvider";
+import { downloadMediaItem } from "@/lib/download";
 
 export default function MediaCard({
   media,
   onOpen,
   onDeleted,
   onRemoveFromAlbum,
+  selectMode = false,
+  selected = false,
 }: {
   media: MediaDTO;
   onOpen?: () => void;
   onDeleted?: (id: string) => void;
   /** Only passed from an album detail page — detaches from this album without deleting the media itself. */
   onRemoveFromAlbum?: () => void;
+  /** When true (multi-select mode), clicking the card toggles selection instead of opening the lightbox, and per-item action buttons are hidden in favor of the selection checkmark. */
+  selectMode?: boolean;
+  selected?: boolean;
 }) {
   const [url, setUrl] = useState<string | null>(null);
   const router = useRouter();
@@ -62,9 +68,17 @@ export default function MediaCard({
     onRemoveFromAlbum?.();
   }
 
+  async function handleDownload(e: React.MouseEvent) {
+    e.stopPropagation();
+    await downloadMediaItem(media.id);
+  }
+
   return (
     <div
-      className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg border border-border bg-surface2"
+      data-media-id={media.id}
+      className={`group relative aspect-square cursor-pointer overflow-hidden rounded-lg border bg-surface2 ${
+        selected ? "border-accent ring-2 ring-accent" : "border-border"
+      }`}
       onClick={onOpen}
     >
       {url ? (
@@ -80,27 +94,46 @@ export default function MediaCard({
           ▶ video
         </span>
       )}
-      <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-80 transition-opacity md:opacity-0 md:group-hover:opacity-100">
-        {onRemoveFromAlbum && (
+      {selectMode ? (
+        <div
+          className={`absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 text-xs font-bold ${
+            selected ? "border-accent bg-accent text-white" : "border-white/85 bg-black/35 text-transparent"
+          }`}
+        >
+          ✓
+        </div>
+      ) : (
+        <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-80 transition-opacity md:opacity-0 md:group-hover:opacity-100">
           <button
             type="button"
-            onClick={handleRemoveFromAlbum}
-            aria-label="Gỡ khỏi album"
-            title="Gỡ khỏi album"
+            onClick={handleDownload}
+            aria-label="Tải xuống"
+            title="Tải xuống"
             className="flex h-7 w-7 items-center justify-center rounded-md bg-black/55 text-xs text-white hover:bg-accent-strong"
           >
-            ⤬
+            ⬇
           </button>
-        )}
-        <button
-          type="button"
-          onClick={handleDelete}
-          aria-label="Xóa"
-          className="flex h-7 w-7 items-center justify-center rounded-md bg-black/55 text-xs text-white hover:bg-danger"
-        >
-          ×
-        </button>
-      </div>
+          {onRemoveFromAlbum && (
+            <button
+              type="button"
+              onClick={handleRemoveFromAlbum}
+              aria-label="Gỡ khỏi album"
+              title="Gỡ khỏi album"
+              className="flex h-7 w-7 items-center justify-center rounded-md bg-black/55 text-xs text-white hover:bg-accent-strong"
+            >
+              ⤬
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleDelete}
+            aria-label="Xóa"
+            className="flex h-7 w-7 items-center justify-center rounded-md bg-black/55 text-xs text-white hover:bg-danger"
+          >
+            ×
+          </button>
+        </div>
+      )}
     </div>
   );
 }

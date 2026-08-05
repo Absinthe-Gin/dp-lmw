@@ -1,6 +1,6 @@
 import { getSessionToken } from "./session";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL as string;
+export const API_URL = process.env.NEXT_PUBLIC_API_URL as string;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getSessionToken();
@@ -35,4 +35,21 @@ export const api = {
     }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
   upload: <T>(path: string, formData: FormData) => request<T>(path, { method: "POST", body: formData }),
+  // Used for zip-download endpoints, which stream a binary body instead of
+  // JSON — request<T>() above always calls res.json(), so this bypasses it.
+  downloadPost: async (path: string, body: unknown): Promise<{ blob: Blob; filename: string | null }> => {
+    const token = getSessionToken();
+    const res = await fetch(`${API_URL}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`API ${path} failed: ${res.status} ${await res.text()}`);
+    const disposition = res.headers.get("Content-Disposition");
+    const filename = disposition?.match(/filename="?([^"]+)"?/)?.[1] ?? null;
+    return { blob: await res.blob(), filename };
+  },
 };

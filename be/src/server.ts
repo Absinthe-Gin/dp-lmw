@@ -21,7 +21,19 @@ app.use("/api/albums", albumsRouter);
 // Backs the "local" storage driver only (be/src/lib/storage.ts) — dev/no-cloud-creds
 // fallback. In production STORAGE_DRIVER=s3 and this route serves nothing.
 if (process.env.STORAGE_DRIVER !== "s3") {
-  app.use("/files", express.static(path.join(__dirname, "..", "uploads")));
+  app.use(
+    "/files",
+    // Mirrors S3's ResponseContentDisposition trick (storage.ts's
+    // getSignedDownloadUrl) so a forced-download link behaves the same
+    // under either storage driver: ?download=<name> -> Content-Disposition.
+    (req, res, next) => {
+      if (typeof req.query.download === "string") {
+        res.setHeader("Content-Disposition", `attachment; filename="${req.query.download}"`);
+      }
+      next();
+    },
+    express.static(path.join(__dirname, "..", "uploads"))
+  );
 }
 
 // Catch-all error handler. Route handlers are wrapped in asyncHandler

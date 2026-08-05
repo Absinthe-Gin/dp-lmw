@@ -3,6 +3,7 @@ import { db } from "../lib/db";
 import { groupByDate, generateAlbumSlideshow } from "@memory-vault/ai";
 import { requireAdmin } from "../middleware/requireAdmin";
 import { asyncHandler } from "../lib/asyncHandler";
+import { streamZip } from "./media";
 import type { AlbumDetailDTO, AlbumDTO, MediaDTO } from "@memory-vault/shared";
 
 export const albumsRouter = Router();
@@ -78,6 +79,25 @@ albumsRouter.get(
       ),
     };
     res.json(detail);
+  })
+);
+
+// Public: same visibility as the detail route above — zips every
+// non-trashed media item's full-size file and streams it down as
+// "<album title>.zip". Reuses media.ts's streamZip so the naming/dedup
+// logic for the archive entries lives in exactly one place.
+albumsRouter.get(
+  "/:id/download",
+  asyncHandler(async (req, res) => {
+    const album = await db.album.findFirst({
+      where: { id: req.params.id, deletedAt: null },
+      include: { media: { where: { media: { deletedAt: null } }, include: { media: true } } },
+    });
+    if (!album) return res.status(404).json({ error: "Not found" });
+    if (!album.media.length) return res.status(404).json({ error: "Album trống" });
+
+    const sanitizedTitle = album.title.replace(/[\\/:*?"<>|]/g, "").trim() || "album";
+    await streamZip(res, `${sanitizedTitle}.zip`, album.media.map((am) => am.media));
   })
 );
 

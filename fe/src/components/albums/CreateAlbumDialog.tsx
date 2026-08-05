@@ -7,9 +7,12 @@ import { api } from "@/lib/api-client";
 export default function CreateAlbumDialog({
   onClose,
   onCreated,
+  initialMediaIds,
 }: {
   onClose: () => void;
   onCreated: (album: AlbumDTO) => void;
+  /** Passed when created from a multi-select "Tạo album" bulk action — added to the album immediately on create. */
+  initialMediaIds?: string[];
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -36,6 +39,7 @@ export default function CreateAlbumDialog({
       const album = await api.post<AlbumDTO>("/api/albums", {
         title: title.trim(),
         description: description.trim() || undefined,
+        mediaIds: initialMediaIds,
       });
       onCreated(album);
     } catch {
@@ -53,6 +57,9 @@ export default function CreateAlbumDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="font-display text-lg font-semibold">Album mới</h2>
+        {initialMediaIds && initialMediaIds.length > 0 && (
+          <p className="mt-1 text-xs text-ink-muted">Sẽ thêm {initialMediaIds.length} mục đã chọn vào album này.</p>
+        )}
         <div className="mt-4 flex flex-col gap-3">
           <input
             value={title}

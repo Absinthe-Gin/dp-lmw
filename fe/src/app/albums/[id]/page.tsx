@@ -7,6 +7,7 @@ import AddMediaDialog from "@/components/albums/AddMediaDialog";
 import BackButton from "@/components/ui/BackButton";
 import { api } from "@/lib/api-client";
 import { recordView } from "@/lib/recentlyViewed";
+import { albumDownloadUrl } from "@/lib/download";
 
 export default function AlbumDetailPage({ params }: { params: { id: string } }) {
   const [album, setAlbum] = useState<AlbumDetailDTO | null>(null);
@@ -55,9 +56,13 @@ export default function AlbumDetailPage({ params }: { params: { id: string } }) 
     reload();
   }
 
-  async function handleRemoveFromAlbum(mediaId: string) {
-    await api.patch(`/api/albums/${params.id}`, { removeMediaIds: [mediaId] });
-    setAlbum((prev) => (prev ? { ...prev, media: prev.media.filter((m) => m.id !== mediaId), mediaCount: prev.mediaCount - 1 } : prev));
+  async function handleRemoveFromAlbum(mediaIds: string[]) {
+    await api.patch(`/api/albums/${params.id}`, { removeMediaIds: mediaIds });
+    setAlbum((prev) =>
+      prev
+        ? { ...prev, media: prev.media.filter((m) => !mediaIds.includes(m.id)), mediaCount: prev.mediaCount - mediaIds.length }
+        : prev
+    );
   }
 
   if (!album) return null;
@@ -130,6 +135,14 @@ export default function AlbumDetailPage({ params }: { params: { id: string } }) 
           >
             + Thêm ảnh/video
           </button>
+          {album.mediaCount > 0 && (
+            <a
+              href={albumDownloadUrl(album.id)}
+              className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold hover:border-accent"
+            >
+              ⬇ Tải xuống (.zip)
+            </a>
+          )}
           <button
             type="button"
             className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold hover:border-accent"
@@ -138,7 +151,11 @@ export default function AlbumDetailPage({ params }: { params: { id: string } }) 
           </button>
         </div>
       </div>
-      <MediaGrid items={album.media} onRemoveFromAlbum={handleRemoveFromAlbum} />
+      <MediaGrid
+        items={album.media}
+        onRemoveFromAlbum={(id) => handleRemoveFromAlbum([id])}
+        onBulkRemoveFromAlbum={handleRemoveFromAlbum}
+      />
       {showAddMedia && (
         <AddMediaDialog
           excludeIds={new Set(album.media.map((m) => m.id))}

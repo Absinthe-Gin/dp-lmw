@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { MediaDTO } from "@memory-vault/shared";
 import { api } from "@/lib/api-client";
 import { recordView } from "@/lib/recentlyViewed";
+import { downloadMediaItem } from "@/lib/download";
 
 function formatMeta(media: MediaDTO): string {
   const date = new Date(media.takenAt ?? media.uploadedAt);
@@ -58,14 +59,28 @@ export default function MediaLightbox({
       role="dialog"
       aria-modal="true"
     >
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Đóng"
-        className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
-      >
-        ✕
-      </button>
+      <div className="absolute right-4 top-4 flex gap-2">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            downloadMediaItem(media.id);
+          }}
+          aria-label="Tải xuống"
+          title="Tải xuống"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+        >
+          ⬇
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Đóng"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+        >
+          ✕
+        </button>
+      </div>
 
       {index > 0 && (
         <button
