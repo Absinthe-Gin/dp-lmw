@@ -1,10 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#4a86e0" />
-      <stop offset="1" stop-color="#3568bb" />
-    </linearGradient>
-  </defs>
-  <rect width="32" height="32" rx="8" fill="url(#g)" />
-  <text x="16" y="21" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" font-weight="700" fill="white">DP</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <circle cx="100" cy="100" r="96" fill="#f6f2ea" stroke="#2f6f6d" stroke-width="6" />
+  <circle cx="100" cy="100" r="84" fill="none" stroke="#2f6f6d" stroke-width="2" opacity="0.55" />
+  <path id="brandArc" d="M 26.70 73.32 A 78 78 0 0 1 173.30 73.32" fill="none" />
+  <text font-family="Georgia, 'Times New Roman', serif" font-size="22" font-weight="700" fill="#1f3a5f" letter-spacing="2">
+    <textPath href="#brandArc" startOffset="50%" text-anchor="middle">DP LMW</textPath>
+  </text>
+  <path d="M 100 126 L 100.00 76.00 A 50 50 0 0 1 135.36 90.64 Z" fill="#1c3f63" />
+  <path d="M 100 126 L 135.36 90.64 A 50 50 0 0 1 150.00 126.00 Z" fill="#2f74ad" />
+  <path d="M 100 126 L 150.00 126.00 A 50 50 0 0 1 135.36 161.36 Z" fill="#1c3f63" />
+  <path d="M 100 126 L 135.36 161.36 A 50 50 0 0 1 100.00 176.00 Z" fill="#2f74ad" />
+  <path d="M 100 126 L 100.00 176.00 A 50 50 0 0 1 64.64 161.36 Z" fill="#1c3f63" />
+  <path d="M 100 126 L 64.64 161.36 A 50 50 0 0 1 50.00 126.00 Z" fill="#2f74ad" />
+  <path d="M 100 126 L 50.00 126.00 A 50 50 0 0 1 64.64 90.64 Z" fill="#1c3f63" />
+  <path d="M 100 126 L 64.64 90.64 A 50 50 0 0 1 100.00 76.00 Z" fill="#2f74ad" />
+  <circle cx="100" cy="126" r="50" fill="none" stroke="#f6f2ea" stroke-width="3" />
 </svg>
