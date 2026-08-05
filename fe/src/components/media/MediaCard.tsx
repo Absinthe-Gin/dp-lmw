@@ -6,7 +6,15 @@ import { useRouter, usePathname } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { getSessionToken } from "@/lib/session";
 
-export default function MediaCard({ media, onDeleted }: { media: MediaDTO; onDeleted?: (id: string) => void }) {
+export default function MediaCard({
+  media,
+  onOpen,
+  onDeleted,
+}: {
+  media: MediaDTO;
+  onOpen?: () => void;
+  onDeleted?: (id: string) => void;
+}) {
   const [url, setUrl] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
@@ -21,7 +29,8 @@ export default function MediaCard({ media, onDeleted }: { media: MediaDTO; onDel
     };
   }, [media.id]);
 
-  async function handleDelete() {
+  async function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation();
     if (!getSessionToken()) {
       router.push(`/admin-login?next=${encodeURIComponent(pathname)}`);
       return;
@@ -32,7 +41,10 @@ export default function MediaCard({ media, onDeleted }: { media: MediaDTO; onDel
   }
 
   return (
-    <div className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-surface2">
+    <div
+      className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg border border-border bg-surface2"
+      onClick={onOpen}
+    >
       {url ? (
         media.type === "IMAGE" ? (
           // eslint-disable-next-line @next/next/no-img-element

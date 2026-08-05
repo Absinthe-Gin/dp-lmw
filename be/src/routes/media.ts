@@ -95,13 +95,15 @@ mediaRouter.post(
 
 // Public: anyone can view. Trashed items 404 here too — once in the
 // trash, a media item is gone from every public surface, not just lists.
+// ?original=1 serves the full-size storageKey instead of the thumbnail —
+// used by the detail lightbox; grid thumbnails keep using the default.
 mediaRouter.get(
   "/:id/url",
   asyncHandler(async (req, res) => {
     const media = await db.media.findFirst({ where: { id: req.params.id, deletedAt: null } });
     if (!media) return res.status(404).json({ error: "Not found" });
 
-    const key = media.thumbnailKey ?? media.storageKey;
+    const key = req.query.original ? media.storageKey : media.thumbnailKey ?? media.storageKey;
     const url = await getSignedDownloadUrl(key);
     res.json({ url });
   })
