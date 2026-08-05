@@ -1,6 +1,7 @@
 import "dotenv/config";
 import path from "node:path";
 import express from "express";
+import type { ErrorRequestHandler } from "express";
 import cors from "cors";
 import { authRouter } from "./routes/auth";
 import { mediaRouter } from "./routes/media";
@@ -22,6 +23,17 @@ app.use("/api/albums", albumsRouter);
 if (process.env.STORAGE_DRIVER !== "s3") {
   app.use("/files", express.static(path.join(__dirname, "..", "uploads")));
 }
+
+// Catch-all error handler. Route handlers are wrapped in asyncHandler
+// (be/src/lib/asyncHandler.ts), which forwards rejected promises here via
+// next(err) instead of leaving them as unhandled rejections — without
+// this, a transient DB/network error (e.g. a Supabase hiccup) would crash
+// the whole process instead of just failing that one request.
+const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
+  console.error(err);
+  res.status(500).json({ error: "Đã có lỗi xảy ra, vui lòng thử lại." });
+};
+app.use(errorHandler);
 
 const port = Number(process.env.PORT) || 4000;
 app.listen(port, () => {
