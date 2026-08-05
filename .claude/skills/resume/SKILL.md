@@ -20,7 +20,7 @@ curl -s https://dp-lmw-be.onrender.com/health
 curl -s https://dp-lmw-fe.vercel.app/ -o /dev/null -w "%{http_code}\n"
 ```
 
-**Vercel auto-deploys reliably. Render does not** — its "Auto-Deploy: On Commit" setting is correctly enabled but the GitHub→Render webhook has silently failed to fire more than once. After any `be/` change, don't trust `/health` (the old instance keeps answering 200 through a stale deploy) — verify with something only the new code would produce, and if stale, go Manual Deploy on the `dp-lmw-be` service in the Render dashboard.
+**Vercel auto-deploys reliably. Render did not, for a real reason that's now fixed (2026-08-05): the Render GitHub App was never actually installed against the `Absinthe-Gin` GitHub account** — it wasn't listed at all under https://github.com/settings/installations, so Render fell back to an anonymous clone of the (public) repo, and the push webhook auto-deploy depends on was never reliably delivered. Fixed by connecting the correct GitHub account in Render's dashboard (Account Settings → GitHub) and completing the App-install flow, which then repo-granted `Absinthe-Gin/dp-lmw`. Auto-deploy hasn't been re-proven reliable yet post-fix — until a few pushes have gone through untouched, still verify a `be/` change actually landed the same way as before: don't trust `/health` (a stale instance answers 200 too), check something only the new code would produce, and if stale, Manual Deploy → Deploy latest commit on the `dp-lmw-be` service.
 
 ## What's done
 
