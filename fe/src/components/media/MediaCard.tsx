@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { getSessionToken } from "@/lib/session";
+import { useConfirm } from "@/components/ui/ConfirmDialogProvider";
 
 export default function MediaCard({
   media,
@@ -18,6 +19,7 @@ export default function MediaCard({
   const [url, setUrl] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
+  const confirm = useConfirm();
 
   useEffect(() => {
     let cancelled = false;
@@ -35,7 +37,13 @@ export default function MediaCard({
       router.push(`/admin-login?next=${encodeURIComponent(pathname)}`);
       return;
     }
-    if (!confirm("Xóa mục này?")) return;
+    const ok = await confirm({
+      title: "Xóa ảnh/video này?",
+      description: "Chuyển vào thùng rác — có thể khôi phục lại sau.",
+      confirmLabel: "Xóa",
+      danger: true,
+    });
+    if (!ok) return;
     await api.delete(`/api/media/${media.id}`);
     onDeleted?.(media.id);
   }

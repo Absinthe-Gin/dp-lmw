@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { AlbumDTO, MediaDTO } from "@memory-vault/shared";
 import { api } from "@/lib/api-client";
 import { getSessionToken } from "@/lib/session";
+import { useConfirm } from "@/components/ui/ConfirmDialogProvider";
 
 function TrashThumb({ media }: { media: MediaDTO }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -30,6 +31,7 @@ function TrashThumb({ media }: { media: MediaDTO }) {
 
 export default function TrashPage() {
   const router = useRouter();
+  const confirm = useConfirm();
   const [media, setMedia] = useState<MediaDTO[]>([]);
   const [albums, setAlbums] = useState<AlbumDTO[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +62,13 @@ export default function TrashPage() {
   }
 
   async function purgeMedia(id: string) {
-    if (!confirm("Xoá vĩnh viễn ảnh/video này? Không thể hoàn tác.")) return;
+    const ok = await confirm({
+      title: "Xoá vĩnh viễn ảnh/video này?",
+      description: "Không thể hoàn tác — tệp sẽ bị xoá khỏi kho lưu trữ.",
+      confirmLabel: "Xoá vĩnh viễn",
+      danger: true,
+    });
+    if (!ok) return;
     await api.delete(`/api/media/${id}/permanent`);
     setMedia((prev) => prev.filter((m) => m.id !== id));
   }
@@ -71,7 +79,13 @@ export default function TrashPage() {
   }
 
   async function purgeAlbum(id: string) {
-    if (!confirm("Xoá vĩnh viễn album này? Không thể hoàn tác (ảnh bên trong vẫn giữ nguyên).")) return;
+    const ok = await confirm({
+      title: "Xoá vĩnh viễn album này?",
+      description: "Không thể hoàn tác. Ảnh/video bên trong không bị xoá, chỉ album biến mất.",
+      confirmLabel: "Xoá vĩnh viễn",
+      danger: true,
+    });
+    if (!ok) return;
     await api.delete(`/api/albums/${id}/permanent`);
     setAlbums((prev) => prev.filter((a) => a.id !== id));
   }

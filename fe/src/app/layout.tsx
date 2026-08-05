@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Merriweather, Open_Sans, IBM_Plex_Mono } from "next/font/google";
 import TopBar from "@/components/layout/TopBar";
+import { ConfirmDialogProvider } from "@/components/ui/ConfirmDialogProvider";
 import "./globals.css";
 
 const merriweather = Merriweather({
@@ -30,8 +31,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="vi" className={`${merriweather.variable} ${openSans.variable} ${plexMono.variable}`}>
       <body className="min-h-screen bg-bg font-sans text-ink antialiased">
-        <TopBar />
-        {children}
+        <ConfirmDialogProvider>
+          <TopBar />
+          {children}
+        </ConfirmDialogProvider>
       </body>
     </html>
   );

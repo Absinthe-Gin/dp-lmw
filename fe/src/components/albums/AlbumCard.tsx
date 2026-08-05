@@ -5,10 +5,12 @@ import { useRouter, usePathname } from "next/navigation";
 import type { AlbumDTO } from "@memory-vault/shared";
 import { api } from "@/lib/api-client";
 import { getSessionToken } from "@/lib/session";
+import { useConfirm } from "@/components/ui/ConfirmDialogProvider";
 
 export default function AlbumCard({ album, onDeleted }: { album: AlbumDTO; onDeleted?: (id: string) => void }) {
   const router = useRouter();
   const pathname = usePathname();
+  const confirm = useConfirm();
 
   async function handleDelete(e: React.MouseEvent) {
     e.preventDefault();
@@ -16,7 +18,13 @@ export default function AlbumCard({ album, onDeleted }: { album: AlbumDTO; onDel
       router.push(`/admin-login?next=${encodeURIComponent(pathname)}`);
       return;
     }
-    if (!confirm(`Xóa album "${album.title}"?`)) return;
+    const ok = await confirm({
+      title: `Xóa album "${album.title}"?`,
+      description: "Chuyển vào thùng rác — có thể khôi phục lại sau. Ảnh/video bên trong không bị xóa.",
+      confirmLabel: "Xóa",
+      danger: true,
+    });
+    if (!ok) return;
     await api.delete(`/api/albums/${album.id}`);
     onDeleted?.(album.id);
   }
