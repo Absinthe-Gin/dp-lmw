@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { AlbumDetailDTO } from "@memory-vault/shared";
 import MediaGrid from "@/components/media/MediaGrid";
 import AddMediaDialog from "@/components/albums/AddMediaDialog";
+import BackButton from "@/components/ui/BackButton";
 import { api } from "@/lib/api-client";
 import { recordView } from "@/lib/recentlyViewed";
 
@@ -63,6 +64,7 @@ export default function AlbumDetailPage({ params }: { params: { id: string } }) 
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+      <BackButton fallbackHref="/albums" />
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         {editing ? (
           <form onSubmit={saveEdit} className="flex max-w-md flex-1 flex-col gap-2">

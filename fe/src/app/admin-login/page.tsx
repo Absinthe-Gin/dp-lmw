@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { setSessionToken } from "@/lib/session";
+import BackButton from "@/components/ui/BackButton";
 
 /**
  * The only login screen in this app. Everyone can view/upload/edit
@@ -42,6 +43,7 @@ function AdminLoginForm() {
 
   return (
     <main className="mx-auto flex max-w-sm flex-col gap-6 px-6 py-20">
+      <BackButton />
       <div>
         <h1 className="font-display text-2xl font-semibold">Đăng nhập quản trị</h1>
         <p className="mt-1.5 text-sm text-ink-muted">

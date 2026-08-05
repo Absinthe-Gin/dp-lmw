@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MediaDTO } from "@memory-vault/shared";
 import MediaGrid from "@/components/media/MediaGrid";
+import BackButton from "@/components/ui/BackButton";
 import { api } from "@/lib/api-client";
 
 type Filter = "ALL" | "IMAGE" | "VIDEO";
@@ -29,6 +30,7 @@ export default function MediaPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+      <BackButton />
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-semibold">Tất cả ảnh &amp; video</h1>

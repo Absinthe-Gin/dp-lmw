@@ -6,6 +6,7 @@ import type { AlbumDTO, MediaDTO } from "@memory-vault/shared";
 import { api } from "@/lib/api-client";
 import { getSessionToken } from "@/lib/session";
 import { useConfirm } from "@/components/ui/ConfirmDialogProvider";
+import BackButton from "@/components/ui/BackButton";
 
 function TrashThumb({ media }: { media: MediaDTO }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -94,6 +95,7 @@ export default function TrashPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+      <BackButton />
       <div className="mb-8">
         <h1 className="font-display text-2xl font-semibold">Thùng rác</h1>
         <p className="mt-1.5 text-sm text-ink-muted">
