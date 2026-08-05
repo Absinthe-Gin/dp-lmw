@@ -17,10 +17,16 @@ export default function HomePage() {
 
       <div className="mb-8 flex flex-col gap-4 sm:flex-row">
         <Link href="/albums" className="flex-1 rounded-lg border border-border bg-surface px-5 py-4 hover:border-accent">
+          <span className="mb-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-tertiary-soft text-tertiary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
+          </span>
           <p className="text-sm font-semibold">Xem album</p>
           <p className="mt-1 text-xs text-ink-muted">Gộp thủ công hoặc tự động theo ngày/vị trí chụp</p>
         </Link>
         <Link href="/upload" className="flex-1 rounded-lg border border-border bg-surface px-5 py-4 hover:border-accent">
+          <span className="mb-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-secondary-soft text-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16V4M12 4l-4 4M12 4l4 4" /><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg>
+          </span>
           <p className="text-sm font-semibold">Tải ảnh/video</p>
           <p className="mt-1 text-xs text-ink-muted">Không cần đăng nhập, kéo thả nhiều tệp cùng lúc</p>
         </Link>

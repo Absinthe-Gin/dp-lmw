@@ -18,6 +18,14 @@ const config: Config = {
           strong: "var(--accent-strong)",
           soft: "var(--accent-soft)",
         },
+        secondary: {
+          DEFAULT: "var(--secondary)",
+          soft: "var(--secondary-soft)",
+        },
+        tertiary: {
+          DEFAULT: "var(--tertiary)",
+          soft: "var(--tertiary-soft)",
+        },
         danger: "var(--danger)",
         success: "var(--success)",
       },

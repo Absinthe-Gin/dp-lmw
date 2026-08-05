@@ -32,7 +32,7 @@ export default function AlbumCard({ album, onDeleted }: { album: AlbumDTO; onDel
         <div className="p-3.5">
           <p className="text-sm font-semibold">{album.title}</p>
           <p className="mt-1 flex items-center gap-1.5 text-xs text-ink-muted">
-            <span className={`h-1.5 w-1.5 rounded-full ${album.source === "MANUAL" ? "bg-accent" : "bg-success"}`} />
+            <span className={`h-1.5 w-1.5 rounded-full ${album.source === "MANUAL" ? "bg-accent" : "bg-secondary"}`} />
             {album.source === "MANUAL" ? "Thủ công" : "Tự động"}
           </p>
         </div>
