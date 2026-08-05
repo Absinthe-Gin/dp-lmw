@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getSessionToken } from "@/lib/session";
-import BrandMark from "./BrandMark";
 
 const NAV = [
   { href: "/", label: "Trang chủ" },
@@ -24,8 +23,8 @@ export default function TopBar() {
     <header className="border-b border-border">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:flex-nowrap sm:gap-6 sm:px-6 sm:py-4">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-strong p-[7px]">
-            <BrandMark className="h-full w-full" />
+          <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-strong font-display text-[15px] font-semibold text-white">
+            DP
           </span>
           <span className="font-display text-lg font-semibold">
             LMW <span className="font-medium text-ink-muted">Vault</span>
