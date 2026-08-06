@@ -116,7 +116,11 @@ export default function MediaGrid({
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+      <div
+        className={`grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 ${
+          selectMode && selectedIds.size > 0 ? "pb-32 sm:pb-24" : ""
+        }`}
+      >
         {visible.map((item, i) => (
           <MediaCard
             key={item.id}
@@ -135,7 +139,7 @@ export default function MediaGrid({
           count={selectedIds.size}
           onCreateAlbum={() => setShowCreateAlbum(true)}
           onDownload={handleBulkDownload}
-          onDelete={handleBulkDelete}
+          onDelete={onBulkRemoveFromAlbum ? undefined : handleBulkDelete}
           onRemoveFromAlbum={onBulkRemoveFromAlbum ? handleBulkRemoveFromAlbum : undefined}
           onClear={clearSelection}
         />

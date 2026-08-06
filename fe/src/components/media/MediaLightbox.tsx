@@ -5,6 +5,7 @@ import type { MediaDTO } from "@memory-vault/shared";
 import { api } from "@/lib/api-client";
 import { recordView } from "@/lib/recentlyViewed";
 import { downloadMediaItem } from "@/lib/download";
+import { DownloadIcon } from "@/components/ui/icons";
 
 function formatMeta(media: MediaDTO): string {
   const date = new Date(media.takenAt ?? media.uploadedAt);
@@ -70,7 +71,7 @@ export default function MediaLightbox({
           title="Tải xuống"
           className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
         >
-          ⬇
+          <DownloadIcon className="h-5 w-5" />
         </button>
         <button
           type="button"

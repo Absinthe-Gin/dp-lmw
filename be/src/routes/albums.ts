@@ -4,6 +4,7 @@ import { groupByDate, generateAlbumSlideshow } from "@memory-vault/ai";
 import { requireAdmin } from "../middleware/requireAdmin";
 import { asyncHandler } from "../lib/asyncHandler";
 import { streamZip } from "./media";
+import { getSignedDownloadUrl } from "../lib/storage";
 import type { AlbumDetailDTO, AlbumDTO, MediaDTO } from "@memory-vault/shared";
 
 export const albumsRouter = Router();
@@ -79,6 +80,30 @@ albumsRouter.get(
       ),
     };
     res.json(detail);
+  })
+);
+
+// Public: same visibility as the detail route above. Signs a thumbnail URL
+// for the album's cover — always the earliest-added non-trashed item
+// (by AlbumMedia.addedAt), computed live rather than off the album's
+// `coverKey` column, so removing the current cover item or reordering never
+// leaves a stale cover behind. Returns { url: null } for an empty album.
+albumsRouter.get(
+  "/:id/cover-url",
+  asyncHandler(async (req, res) => {
+    const album = await db.album.findFirst({ where: { id: req.params.id, deletedAt: null } });
+    if (!album) return res.status(404).json({ error: "Not found" });
+
+    const first = await db.albumMedia.findFirst({
+      where: { albumId: req.params.id, media: { deletedAt: null } },
+      orderBy: { addedAt: "asc" },
+      include: { media: true },
+    });
+    if (!first) return res.json({ url: null });
+
+    const key = first.media.thumbnailKey ?? first.media.storageKey;
+    const url = await getSignedDownloadUrl(key);
+    res.json({ url });
   })
 );
 

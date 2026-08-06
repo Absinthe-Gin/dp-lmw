@@ -8,6 +8,7 @@ import BackButton from "@/components/ui/BackButton";
 import { api } from "@/lib/api-client";
 import { recordView } from "@/lib/recentlyViewed";
 import { albumDownloadUrl } from "@/lib/download";
+import { DownloadIcon } from "@/components/ui/icons";
 
 export default function AlbumDetailPage({ params }: { params: { id: string } }) {
   const [album, setAlbum] = useState<AlbumDetailDTO | null>(null);
@@ -138,9 +139,10 @@ export default function AlbumDetailPage({ params }: { params: { id: string } }) 
           {album.mediaCount > 0 && (
             <a
               href={albumDownloadUrl(album.id)}
-              className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold hover:border-accent"
+              className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold hover:border-accent"
             >
-              ⬇ Tải xuống (.zip)
+              <DownloadIcon className="h-4 w-4" />
+              Tải xuống (.zip)
             </a>
           )}
           <button

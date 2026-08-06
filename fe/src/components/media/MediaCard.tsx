@@ -7,6 +7,7 @@ import { api } from "@/lib/api-client";
 import { getSessionToken } from "@/lib/session";
 import { useConfirm } from "@/components/ui/ConfirmDialogProvider";
 import { downloadMediaItem } from "@/lib/download";
+import { DownloadIcon } from "@/components/ui/icons";
 
 export default function MediaCard({
   media,
@@ -109,9 +110,9 @@ export default function MediaCard({
             onClick={handleDownload}
             aria-label="Tải xuống"
             title="Tải xuống"
-            className="flex h-7 w-7 items-center justify-center rounded-md bg-black/55 text-xs text-white hover:bg-accent-strong"
+            className="flex h-7 w-7 items-center justify-center rounded-md bg-black/55 text-white hover:bg-accent-strong"
           >
-            ⬇
+            <DownloadIcon className="h-3.5 w-3.5" />
           </button>
           {onRemoveFromAlbum && (
             <button
@@ -124,14 +125,19 @@ export default function MediaCard({
               ⤬
             </button>
           )}
-          <button
-            type="button"
-            onClick={handleDelete}
-            aria-label="Xóa"
-            className="flex h-7 w-7 items-center justify-center rounded-md bg-black/55 text-xs text-white hover:bg-danger"
-          >
-            ×
-          </button>
+          {/* Inside an album, only download + "remove from album" are offered — no
+              soft-delete-to-trash, since that's a global destructive action on the
+              media itself, not something an album view should expose. */}
+          {!onRemoveFromAlbum && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              aria-label="Xóa"
+              className="flex h-7 w-7 items-center justify-center rounded-md bg-black/55 text-xs text-white hover:bg-danger"
+            >
+              ×
+            </button>
+          )}
         </div>
       )}
     </div>

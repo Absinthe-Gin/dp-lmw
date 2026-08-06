@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getSessionToken, clearSessionToken } from "@/lib/session";
 import BrandMark from "./BrandMark";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 const NAV = [
   { href: "/", label: "Trang chủ" },
@@ -38,7 +39,7 @@ export default function TopBar() {
         <Link href="/" className="flex items-center gap-2.5">
           <BrandMark className="h-9 w-9 flex-none" />
           <span className="font-display text-lg font-semibold">
-            LMW <span className="font-medium text-ink-muted">Vault</span>
+            LMW <span className="font-medium text-ink-muted">Memories</span>
           </span>
         </Link>
 
@@ -60,6 +61,7 @@ export default function TopBar() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           {isAdmin && (
             <Link
               href="/trash"

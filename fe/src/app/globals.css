@@ -3,46 +3,101 @@
 @tailwind utilities;
 
 :root {
-  --bg: #d9e8f8;
-  --surface: #f3f9ff;
-  --surface-2: #e4eff9;
-  --border: #b7d2ec;
-  --ink: #1f3a5f;
-  --ink-muted: #52709a;
-  --ink-faint: #8aa4c4;
-  --accent: #4a86e0;
-  --accent-strong: #3568bb;
-  --accent-soft: #eaf2ff;
+  /* Pastel cyan background, revised from the earlier pastel-blue palette —
+     neutrals (bg/surface/border/ink) retuned for the cyan hue; accent stays
+     a cool blue (reads calm/professional against cyan rather than blending
+     into it) and tertiary moved from teal to violet so it stays visually
+     distinct now that the background itself sits in teal/cyan territory. */
+  --bg: #cdeef1;
+  --surface: #f1fcfd;
+  --surface-2: #dff5f6;
+  --border: #a2d9dd;
+  --ink: #123638;
+  --ink-muted: #4b7376;
+  --ink-faint: #7fa5a8;
+  --accent: #2f7fb8;
+  --accent-strong: #22638f;
+  --accent-soft: #e6f5fb;
   --secondary: #f2a06c;
   --secondary-soft: #fdefe3;
-  --tertiary: #3ec0ad;
-  --tertiary-soft: #e6f9f5;
+  --tertiary: #8b6fd8;
+  --tertiary-soft: #f0ecfb;
   --danger: #d6594b;
-  --success: #3ba873;
+  --success: #2f9e73;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #142235;
-    --surface: #1c2f47;
-    --surface-2: #24395a;
-    --border: #2b4463;
-    --ink: #e9f1fb;
-    --ink-muted: #8fa8c9;
-    --ink-faint: #5c7ba3;
-    --accent: #74a7ee;
-    --accent-strong: #9ac0f6;
-    --accent-soft: #21304d;
-    --secondary: #f4b088;
-    --secondary-soft: #362c22;
-    --tertiary: #62d5c2;
-    --tertiary-soft: #17322d;
-    --danger: #ec9686;
-    --success: #7bd1a3;
-  }
+/* Dark mode is opt-in only, via ThemeToggle.tsx stamping data-theme="dark"
+   on <html> (persisted in localStorage, applied pre-hydration by the inline
+   script in layout.tsx to avoid a flash) — deliberately NOT a
+   prefers-color-scheme media query anymore, so the app always opens in
+   light mode regardless of the OS/browser setting; dark only ever happens
+   if the user explicitly toggles it here in-app. */
+:root[data-theme="dark"] {
+  --bg: #0b2426;
+  --surface: #11363a;
+  --surface-2: #164348;
+  --border: #1e565c;
+  --ink: #e7f7f8;
+  --ink-muted: #86bcc0;
+  --ink-faint: #53898d;
+  --accent: #6fb3e8;
+  --accent-strong: #9ecdf3;
+  --accent-soft: #17323c;
+  --secondary: #f4b088;
+  --secondary-soft: #362c22;
+  --tertiary: #ac93e8;
+  --tertiary-soft: #241f3a;
+  --danger: #ec9686;
+  --success: #7fd6ac;
 }
 
 body {
   background: var(--bg);
   color: var(--ink);
+}
+
+/* BackgroundBubbles.tsx renders both layers unconditionally; which one is
+   visible is decided here purely off the data-theme attribute, so toggling
+   theme swaps the decoration instantly with no React re-render. */
+.clouds-layer {
+  display: block;
+}
+.stars-layer {
+  display: none;
+}
+:root[data-theme="dark"] .clouds-layer {
+  display: none;
+}
+:root[data-theme="dark"] .stars-layer {
+  display: block;
+}
+
+/* Slow horizontal drift for clouds (light mode) — gentle since these sit
+   behind real content and shouldn't distract. */
+@keyframes cloud-drift {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(var(--cloud-drift-x, 24px));
+  }
+}
+
+/* Gentle opacity pulse for stars (dark mode). */
+@keyframes star-twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cloud,
+  .star {
+    animation: none !important;
+  }
 }

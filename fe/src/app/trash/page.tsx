@@ -7,6 +7,7 @@ import { api } from "@/lib/api-client";
 import { getSessionToken } from "@/lib/session";
 import { useConfirm } from "@/components/ui/ConfirmDialogProvider";
 import BackButton from "@/components/ui/BackButton";
+import TrashSelectionActionBar from "@/components/trash/TrashSelectionActionBar";
 
 function TrashThumb({ media }: { media: MediaDTO }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -36,6 +37,9 @@ export default function TrashPage() {
   const [media, setMedia] = useState<MediaDTO[]>([]);
   const [albums, setAlbums] = useState<AlbumDTO[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedMediaIds, setSelectedMediaIds] = useState<Set<string>>(new Set());
+  const [selectedAlbumIds, setSelectedAlbumIds] = useState<Set<string>>(new Set());
 
   function reload() {
     Promise.all([
@@ -56,6 +60,70 @@ export default function TrashPage() {
     reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function toggleSelectMode() {
+    setSelectMode((v) => !v);
+    setSelectedMediaIds(new Set());
+    setSelectedAlbumIds(new Set());
+  }
+
+  function toggleMediaSelected(id: string) {
+    setSelectedMediaIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAlbumSelected(id: string) {
+    setSelectedAlbumIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelectedMediaIds(new Set());
+    setSelectedAlbumIds(new Set());
+  }
+
+  const selectedCount = selectedMediaIds.size + selectedAlbumIds.size;
+
+  async function handleBulkRestore() {
+    const mediaIds = Array.from(selectedMediaIds);
+    const albumIds = Array.from(selectedAlbumIds);
+    await Promise.all([
+      ...mediaIds.map((id) => api.post(`/api/media/${id}/restore`, {})),
+      ...albumIds.map((id) => api.post(`/api/albums/${id}/restore`, {})),
+    ]);
+    setMedia((prev) => prev.filter((m) => !selectedMediaIds.has(m.id)));
+    setAlbums((prev) => prev.filter((a) => !selectedAlbumIds.has(a.id)));
+    clearSelection();
+    setSelectMode(false);
+  }
+
+  async function handleBulkPurge() {
+    const ok = await confirm({
+      title: `Xoá vĩnh viễn ${selectedCount} mục đã chọn?`,
+      description: "Không thể hoàn tác — tệp/album sẽ bị xoá khỏi hệ thống.",
+      confirmLabel: "Xoá vĩnh viễn",
+      danger: true,
+    });
+    if (!ok) return;
+    const mediaIds = Array.from(selectedMediaIds);
+    const albumIds = Array.from(selectedAlbumIds);
+    await Promise.all([
+      ...mediaIds.map((id) => api.delete(`/api/media/${id}/permanent`)),
+      ...albumIds.map((id) => api.delete(`/api/albums/${id}/permanent`)),
+    ]);
+    setMedia((prev) => prev.filter((m) => !selectedMediaIds.has(m.id)));
+    setAlbums((prev) => prev.filter((a) => !selectedAlbumIds.has(a.id)));
+    clearSelection();
+    setSelectMode(false);
+  }
 
   async function restoreMedia(id: string) {
     await api.post(`/api/media/${id}/restore`, {});
@@ -93,14 +161,29 @@ export default function TrashPage() {
 
   if (loading) return null;
 
+  const hasAnything = media.length > 0 || albums.length > 0;
+
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+    <main className={`mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12 ${selectMode && selectedCount > 0 ? "pb-32 sm:pb-24" : ""}`}>
       <BackButton />
-      <div className="mb-8">
-        <h1 className="font-display text-2xl font-semibold">Thùng rác</h1>
-        <p className="mt-1.5 text-sm text-ink-muted">
-          Ảnh, video và album đã xoá nằm ở đây — khôi phục lại hoặc xoá vĩnh viễn.
-        </p>
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl font-semibold">Thùng rác</h1>
+          <p className="mt-1.5 text-sm text-ink-muted">
+            Ảnh, video và album đã xoá nằm ở đây — khôi phục lại hoặc xoá vĩnh viễn.
+          </p>
+        </div>
+        {hasAnything && (
+          <button
+            type="button"
+            onClick={toggleSelectMode}
+            className={`rounded-lg border px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+              selectMode ? "border-accent bg-accent-soft text-accent-strong" : "border-border bg-surface hover:border-accent"
+            }`}
+          >
+            {selectMode ? "Hủy chọn" : "Chọn nhiều"}
+          </button>
+        )}
       </div>
 
       <section className="mb-10">
@@ -109,29 +192,49 @@ export default function TrashPage() {
           <p className="text-sm text-ink-faint">Không có gì trong thùng rác.</p>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {media.map((m) => (
-              <div key={m.id} className="overflow-hidden rounded-lg border border-border bg-surface2">
-                <div className="aspect-square">
-                  <TrashThumb media={m} />
-                </div>
-                <div className="flex gap-1 p-2">
-                  <button
-                    type="button"
-                    onClick={() => restoreMedia(m.id)}
-                    className="flex-1 rounded-md border border-border bg-surface px-2 py-1 text-xs font-semibold hover:border-accent"
+            {media.map((m) => {
+              const selected = selectedMediaIds.has(m.id);
+              return (
+                <div
+                  key={m.id}
+                  className={`overflow-hidden rounded-lg border bg-surface2 ${selected ? "border-accent ring-2 ring-accent" : "border-border"}`}
+                >
+                  <div
+                    className="relative aspect-square cursor-pointer"
+                    onClick={selectMode ? () => toggleMediaSelected(m.id) : undefined}
                   >
-                    Khôi phục
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => purgeMedia(m.id)}
-                    className="flex-1 rounded-md border border-danger px-2 py-1 text-xs font-semibold text-danger hover:bg-danger hover:text-white"
-                  >
-                    Xoá hẳn
-                  </button>
+                    <TrashThumb media={m} />
+                    {selectMode && (
+                      <div
+                        className={`absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 text-xs font-bold ${
+                          selected ? "border-accent bg-accent text-white" : "border-white/85 bg-black/35 text-transparent"
+                        }`}
+                      >
+                        ✓
+                      </div>
+                    )}
+                  </div>
+                  {!selectMode && (
+                    <div className="flex gap-1 p-2">
+                      <button
+                        type="button"
+                        onClick={() => restoreMedia(m.id)}
+                        className="flex-1 rounded-md border border-border bg-surface px-2 py-1 text-xs font-semibold hover:border-accent"
+                      >
+                        Khôi phục
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => purgeMedia(m.id)}
+                        className="flex-1 rounded-md border border-danger px-2 py-1 text-xs font-semibold text-danger hover:bg-danger hover:text-white"
+                      >
+                        Xoá hẳn
+                      </button>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
@@ -142,33 +245,64 @@ export default function TrashPage() {
           <p className="text-sm text-ink-faint">Không có gì trong thùng rác.</p>
         ) : (
           <div className="flex flex-col gap-2">
-            {albums.map((a) => (
-              <div key={a.id} className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-3">
-                <div>
-                  <p className="text-sm font-semibold">{a.title}</p>
-                  <p className="text-xs text-ink-muted">{a.mediaCount} mục</p>
+            {albums.map((a) => {
+              const selected = selectedAlbumIds.has(a.id);
+              return (
+                <div
+                  key={a.id}
+                  className={`flex items-center justify-between rounded-lg border bg-surface px-4 py-3 ${
+                    selected ? "border-accent ring-2 ring-accent" : "border-border"
+                  } ${selectMode ? "cursor-pointer" : ""}`}
+                  onClick={selectMode ? () => toggleAlbumSelected(a.id) : undefined}
+                >
+                  <div className="flex items-center gap-3">
+                    {selectMode && (
+                      <div
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold ${
+                          selected ? "border-accent bg-accent text-white" : "border-border text-transparent"
+                        }`}
+                      >
+                        ✓
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm font-semibold">{a.title}</p>
+                      <p className="text-xs text-ink-muted">{a.mediaCount} mục</p>
+                    </div>
+                  </div>
+                  {!selectMode && (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => restoreAlbum(a.id)}
+                        className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-semibold hover:border-accent"
+                      >
+                        Khôi phục
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => purgeAlbum(a.id)}
+                        className="rounded-md border border-danger px-3 py-1.5 text-xs font-semibold text-danger hover:bg-danger hover:text-white"
+                      >
+                        Xoá hẳn
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => restoreAlbum(a.id)}
-                    className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-semibold hover:border-accent"
-                  >
-                    Khôi phục
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => purgeAlbum(a.id)}
-                    className="rounded-md border border-danger px-3 py-1.5 text-xs font-semibold text-danger hover:bg-danger hover:text-white"
-                  >
-                    Xoá hẳn
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
+
+      {selectMode && selectedCount > 0 && (
+        <TrashSelectionActionBar
+          count={selectedCount}
+          onRestore={handleBulkRestore}
+          onPurge={handleBulkPurge}
+          onClear={clearSelection}
+        />
+      )}
     </main>
   );
 }

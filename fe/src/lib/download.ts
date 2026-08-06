@@ -41,3 +41,21 @@ export async function downloadSelectionZip(ids: string[]) {
   const { blob, filename } = await api.downloadPost("/api/media/download-zip", { ids });
   triggerBlobDownload(blob, filename ?? "dp-lmw-media.zip");
 }
+
+/**
+ * Bulk album download: there's no batch-zip endpoint for multiple albums (each
+ * album's zip already streams directly via GET .../download), so this just
+ * triggers that same per-album link for every selected album, staggered so
+ * the browser doesn't treat near-simultaneous downloads as a popup flood.
+ */
+export async function downloadMultipleAlbums(ids: string[]) {
+  ids.forEach((id, i) => {
+    setTimeout(() => {
+      const a = document.createElement("a");
+      a.href = albumDownloadUrl(id);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }, i * 400);
+  });
+}
