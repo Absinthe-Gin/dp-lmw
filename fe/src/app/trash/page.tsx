@@ -90,7 +90,14 @@ export default function TrashPage() {
     setSelectedAlbumIds(new Set());
   }
 
+  function selectAll() {
+    setSelectedMediaIds(new Set(media.map((m) => m.id)));
+    setSelectedAlbumIds(new Set(albums.map((a) => a.id)));
+  }
+
   const selectedCount = selectedMediaIds.size + selectedAlbumIds.size;
+  const totalCount = media.length + albums.length;
+  const allSelected = totalCount > 0 && selectedCount === totalCount;
 
   async function handleBulkRestore() {
     const mediaIds = Array.from(selectedMediaIds);
@@ -174,15 +181,26 @@ export default function TrashPage() {
           </p>
         </div>
         {hasAnything && (
-          <button
-            type="button"
-            onClick={toggleSelectMode}
-            className={`rounded-lg border px-3.5 py-1.5 text-sm font-semibold transition-colors ${
-              selectMode ? "border-accent bg-accent-soft text-accent-strong" : "border-border bg-surface hover:border-accent"
-            }`}
-          >
-            {selectMode ? "Hủy chọn" : "Chọn nhiều"}
-          </button>
+          <div className="flex gap-2">
+            {selectMode && (
+              <button
+                type="button"
+                onClick={allSelected ? clearSelection : selectAll}
+                className="rounded-lg border border-border bg-surface px-3.5 py-1.5 text-sm font-semibold transition-colors hover:border-accent"
+              >
+                {allSelected ? "Bỏ chọn tất cả" : "Chọn tất cả"}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={toggleSelectMode}
+              className={`rounded-lg border px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+                selectMode ? "border-accent bg-accent-soft text-accent-strong" : "border-border bg-surface hover:border-accent"
+              }`}
+            >
+              {selectMode ? "Hủy chọn" : "Chọn nhiều"}
+            </button>
+          </div>
         )}
       </div>
 
