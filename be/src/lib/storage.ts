@@ -84,6 +84,21 @@ export async function getObjectStream(key: string): Promise<NodeJS.ReadableStrea
   return result.Body as NodeJS.ReadableStream;
 }
 
+/**
+ * Buffers an object fully into memory — used by duplicates.ts's backfill
+ * step, which needs to (re-)hash the original bytes of media uploaded
+ * before contentHash/perceptualHash existed. Fine at this app's per-file
+ * size scale; don't reach for this on a hot path that runs per-request.
+ */
+export async function getObjectBuffer(key: string): Promise<Buffer> {
+  const stream = await getObjectStream(key);
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream as AsyncIterable<Buffer>) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
 export async function deleteObject(key: string) {
   if (DRIVER === "local") {
     await fs.rm(path.join(LOCAL_ROOT, key), { force: true });

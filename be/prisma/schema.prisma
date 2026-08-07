@@ -23,7 +23,7 @@ model Media {
   longitude      Float?
   sizeBytes      Int? // original + thumbnail bytes combined, as actually written to storage; null for rows uploaded before this field existed (not backfilled)
   contentHash    String? // SHA-256 of the original file bytes — exact-duplicate detection (be/src/lib/contentHash.ts)
-  perceptualHash String? // dHash, images only — near-duplicate detection (ai/src/perceptualHash.ts). Null for videos and for rows uploaded before this feature existed (not backfilled, same as sizeBytes above).
+  perceptualHash String? // dHash, images only (always null for videos) — near-duplicate detection (ai/src/perceptualHash.ts). Both hash fields are null right after a schema migration for rows uploaded before this feature existed, but NOT permanently: GET /api/duplicates lazily backfills any still-null contentHash on every call (be/src/routes/duplicates.ts's backfillMissingHashes), so this self-heals the first time someone loads /duplicates or hits "Kiểm tra" after deploy.
   uploadedAt     DateTime  @default(now())
   deletedAt      DateTime? // soft delete: non-null = sitting in the trash, not purged yet
 
