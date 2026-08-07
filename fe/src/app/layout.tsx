@@ -32,8 +32,14 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // suppressHydrationWarning below: THEME_INIT_SCRIPT stamps data-theme on
+  // this element before React hydrates (see lib/theme.ts) — that's a
+  // deliberate, expected mismatch (server never renders data-theme, only
+  // this pre-hydration script does), not a real one, so this only silences
+  // the warning for html's own attributes, not for mismatched content
+  // anywhere else in the tree.
   return (
-    <html lang="vi" className={`${merriweather.variable} ${openSans.variable} ${plexMono.variable}`}>
+    <html lang="vi" className={`${merriweather.variable} ${openSans.variable} ${plexMono.variable}`} suppressHydrationWarning>
       <head>
         {/* Blocking, runs before hydration: applies a previously-saved "dark"
             choice immediately so a returning visitor doesn't see a light
