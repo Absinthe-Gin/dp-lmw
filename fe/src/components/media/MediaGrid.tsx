@@ -32,12 +32,15 @@ function groupKeyAndLabel(item: MediaDTO, mode: GroupBy): { key: string; label: 
 export default function MediaGrid({
   items,
   groupBy,
+  leftControls,
   onRemoveFromAlbum,
   onBulkRemoveFromAlbum,
 }: {
   items: MediaDTO[];
   /** When set, renders items in sections headed by upload day/month instead of one flat grid — see /media's toggle. Omit for a plain flat grid (album detail pages, etc.). */
   groupBy?: GroupBy;
+  /** Rendered on the left of the same row as "Chọn nhiều" (e.g. /media's Ngày/Tháng toggle) — omit to leave that side empty. */
+  leftControls?: React.ReactNode;
   /** Passed only from an album detail page — renders a "remove from album" action per card. */
   onRemoveFromAlbum?: (id: string) => void;
   /** Passed only from an album detail page — bulk equivalent for the selection action bar. */
@@ -154,7 +157,8 @@ export default function MediaGrid({
 
   return (
     <>
-      <div className="mb-3 flex justify-end">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div>{leftControls}</div>
         <button
           type="button"
           onClick={toggleSelectMode}

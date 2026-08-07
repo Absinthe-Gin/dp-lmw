@@ -79,24 +79,28 @@ export default function MediaPage() {
         <StatCard value={videoCount} label="Video" tone="secondary" />
       </div>
 
-      <div className="mb-4 flex justify-end">
-        <div className="flex gap-1 rounded-full border border-border bg-surface2 p-1">
-          {GROUP_OPTIONS.map((g) => (
-            <button
-              key={g.value}
-              type="button"
-              onClick={() => setGroupBy(g.value)}
-              className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${
-                groupBy === g.value ? "bg-accent text-white" : "text-ink-muted hover:text-ink"
-              }`}
-            >
-              {g.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {filtered ? <MediaGrid items={filtered} groupBy={groupBy} /> : null}
+      {filtered ? (
+        <MediaGrid
+          items={filtered}
+          groupBy={groupBy}
+          leftControls={
+            <div className="flex gap-1 rounded-full border border-border bg-surface2 p-1">
+              {GROUP_OPTIONS.map((g) => (
+                <button
+                  key={g.value}
+                  type="button"
+                  onClick={() => setGroupBy(g.value)}
+                  className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+                    groupBy === g.value ? "bg-accent text-white" : "text-ink-muted hover:text-ink"
+                  }`}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
+          }
+        />
+      ) : null}
     </main>
   );
 }
