@@ -3,6 +3,7 @@ import { requireAdmin } from "../middleware/requireAdmin";
 import { asyncHandler } from "../lib/asyncHandler";
 import { getSystemSettings, updateSystemSettings } from "../lib/systemSettings";
 import { createSiteAccessToken } from "../lib/auth";
+import { db } from "../lib/db";
 
 export const settingsRouter = Router();
 
@@ -33,16 +34,56 @@ settingsRouter.post(
   })
 );
 
-// Admin only: flip public/private and/or set a new access code. Either
-// field can be sent alone (e.g. just toggling isPublic without touching a
-// previously-set code, so turning private back on later doesn't require
-// re-entering the code).
+// Admin only: flip public/private, set a new access code, and/or set the
+// storage quota threshold. Any field can be sent alone (e.g. just toggling
+// isPublic without touching a previously-set code, so turning private back
+// on later doesn't require re-entering the code).
 settingsRouter.patch(
   "/",
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const { isPublic, accessCode } = req.body as { isPublic?: boolean; accessCode?: string };
-    const settings = await updateSystemSettings({ isPublic, accessCode });
-    res.json({ isPublic: settings.isPublic, hasAccessCode: Boolean(settings.accessCode) });
+    const { isPublic, accessCode, storageQuotaBytes } = req.body as {
+      isPublic?: boolean;
+      accessCode?: string;
+      storageQuotaBytes?: number;
+    };
+    const settings = await updateSystemSettings({ isPublic, accessCode, storageQuotaBytes });
+    res.json({
+      isPublic: settings.isPublic,
+      hasAccessCode: Boolean(settings.accessCode),
+      storageQuotaBytes: settings.storageQuotaBytes,
+    });
+  })
+);
+
+// Admin only: the system-management page's data source. storageUsedBytes
+// sums Media.sizeBytes across every row regardless of trash status — a
+// soft-deleted item's file is still physically sitting in the bucket until
+// it's permanently purged, so it still counts against real usage.
+// storageQuotaBytes is NOT pulled from the storage provider — Supabase
+// Storage and Render were both checked directly and neither exposes
+// account-level quota/usage via a public API — it's just the admin-set
+// threshold from PATCH / above, compared against on the frontend.
+settingsRouter.get(
+  "/usage",
+  requireAdmin,
+  asyncHandler(async (_req, res) => {
+    const [sizeAgg, untrackedCount, mediaCount, albumCount, settings] = await Promise.all([
+      db.media.aggregate({ _sum: { sizeBytes: true } }),
+      db.media.count({ where: { sizeBytes: null } }),
+      db.media.count({ where: { deletedAt: null } }),
+      db.album.count({ where: { deletedAt: null } }),
+      getSystemSettings(),
+    ]);
+
+    res.json({
+      storageUsedBytes: sizeAgg._sum.sizeBytes ?? 0,
+      storageQuotaBytes: settings.storageQuotaBytes,
+      // Media uploaded before sizeBytes was tracked isn't counted above —
+      // surfaced so the admin knows storageUsedBytes may be an undercount.
+      untrackedMediaCount: untrackedCount,
+      mediaCount,
+      albumCount,
+    });
   })
 );

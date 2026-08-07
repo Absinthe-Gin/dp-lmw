@@ -117,11 +117,13 @@ mediaRouter.post(
     let width: number | null = null;
     let height: number | null = null;
     let exif = { takenAt: null as Date | null, latitude: null as number | null, longitude: null as number | null };
+    let sizeBytes = file.buffer.length;
 
     if (isImage) {
       const thumb = await createThumbnail(file.buffer);
       thumbnailKey = `${key}-thumb.jpg`;
       await uploadObject(thumbnailKey, thumb, "image/jpeg");
+      sizeBytes += thumb.length;
 
       const dims = await getImageDimensions(file.buffer);
       width = dims.width;
@@ -136,6 +138,7 @@ mediaRouter.post(
         thumbnailKey,
         width,
         height,
+        sizeBytes,
         takenAt: exif.takenAt,
         latitude: exif.latitude,
         longitude: exif.longitude,

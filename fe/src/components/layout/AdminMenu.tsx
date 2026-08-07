@@ -8,10 +8,10 @@ import { getSessionToken, clearSessionToken } from "@/lib/session";
 
 /**
  * Single dropdown replacing the old separate "Thùng rác" link + admin
- * status pill — everything admin-related (trash, login/logout, and the
- * system-wide public/private toggle) lives behind one "Quản trị" button
- * now, leaving room to add more admin-only actions here later without
- * cluttering the top bar itself.
+ * status pill — everything admin-related (trash, the /system management
+ * page, login/logout, and the system-wide public/private toggle) lives
+ * behind one "Quản trị" button now, leaving room to add more admin-only
+ * actions here later without cluttering the top bar itself.
  */
 export default function AdminMenu() {
   const pathname = usePathname();
@@ -117,6 +117,15 @@ export default function AdminMenu() {
                 }`}
               >
                 Thùng rác
+              </Link>
+              <Link
+                href="/system"
+                onClick={() => setOpen(false)}
+                className={`block rounded-md px-3 py-2 text-sm font-semibold hover:bg-surface2 ${
+                  pathname === "/system" ? "text-accent" : "text-ink"
+                }`}
+              >
+                Quản lý hệ thống
               </Link>
 
               <div className="my-2 border-t border-border" />
