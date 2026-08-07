@@ -10,6 +10,7 @@ import { authRouter } from "./routes/auth";
 import { settingsRouter } from "./routes/settings";
 import { mediaRouter } from "./routes/media";
 import { albumsRouter } from "./routes/albums";
+import { duplicatesRouter } from "./routes/duplicates";
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/settings", settingsRouter);
 app.use("/api/media", mediaRouter);
 app.use("/api/albums", albumsRouter);
+app.use("/api/duplicates", duplicatesRouter);
 
 // Backs the "local" storage driver only (be/src/lib/storage.ts) — dev/no-cloud-creds
 // fallback. In production STORAGE_DRIVER=s3 and this route serves nothing.

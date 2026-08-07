@@ -11,6 +11,7 @@ const NAV = [
   { href: "/upload", label: "Tải lên" },
   { href: "/media", label: "Ảnh & Video" },
   { href: "/albums", label: "Album" },
+  { href: "/duplicates", label: "Trùng lặp" },
 ];
 
 export default function TopBar() {

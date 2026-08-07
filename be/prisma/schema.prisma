@@ -11,25 +11,28 @@ datasource db {
 // Viewing/uploading/editing needs no login; only deletion is admin-gated
 // (see be/src/middleware/requireAdmin.ts).
 model Media {
-  id           String    @id @default(cuid())
-  type         MediaType
-  storageKey   String    @unique // object key in bucket (original)
-  thumbnailKey String? // object key for generated thumbnail
-  width        Int?
-  height       Int?
-  durationSec  Int? // for video
-  takenAt      DateTime? // from EXIF, falls back to uploadedAt
-  latitude     Float?
-  longitude    Float?
-  sizeBytes    Int? // original + thumbnail bytes combined, as actually written to storage; null for rows uploaded before this field existed (not backfilled)
-  uploadedAt   DateTime  @default(now())
-  deletedAt    DateTime? // soft delete: non-null = sitting in the trash, not purged yet
+  id             String    @id @default(cuid())
+  type           MediaType
+  storageKey     String    @unique // object key in bucket (original)
+  thumbnailKey   String? // object key for generated thumbnail
+  width          Int?
+  height         Int?
+  durationSec    Int? // for video
+  takenAt        DateTime? // from EXIF, falls back to uploadedAt
+  latitude       Float?
+  longitude      Float?
+  sizeBytes      Int? // original + thumbnail bytes combined, as actually written to storage; null for rows uploaded before this field existed (not backfilled)
+  contentHash    String? // SHA-256 of the original file bytes — exact-duplicate detection (be/src/lib/contentHash.ts)
+  perceptualHash String? // dHash, images only — near-duplicate detection (ai/src/perceptualHash.ts). Null for videos and for rows uploaded before this feature existed (not backfilled, same as sizeBytes above).
+  uploadedAt     DateTime  @default(now())
+  deletedAt      DateTime? // soft delete: non-null = sitting in the trash, not purged yet
 
   albums AlbumMedia[]
 
   @@index([takenAt])
   @@index([uploadedAt]) // GET /api/media orders by this
   @@index([deletedAt]) // trash listing / excluding trashed rows from every other query
+  @@index([contentHash]) // GET /api/duplicates' exact-match grouping
 }
 
 enum MediaType {
@@ -88,4 +91,15 @@ model SystemSettings {
   // number pulled from the provider. Default 1 GiB.
   storageQuotaBytes Float    @default(1073741824)
   updatedAt         DateTime @updatedAt
+}
+
+// Records a duplicate cluster the admin/viewer explicitly dismissed
+// ("Giữ nguyên" on /duplicates) so it stops reappearing. groupKey is the
+// cluster's member Media ids, sorted and joined by "," — computed fresh
+// each time be/src/routes/duplicates.ts runs detection, since groups
+// aren't otherwise persisted anywhere (see that route for why).
+model IgnoredDuplicateGroup {
+  id        String   @id @default(cuid())
+  groupKey  String   @unique
+  createdAt DateTime @default(now())
 }

@@ -6,9 +6,10 @@ import archiver from "archiver";
 import { db } from "../lib/db";
 import { uploadObject, deleteObject, getSignedDownloadUrl, getObjectStream } from "../lib/storage";
 import { attachmentDisposition } from "../lib/contentDisposition";
-import { createThumbnail, getImageDimensions, extractExif } from "@memory-vault/ai";
+import { createThumbnail, getImageDimensions, extractExif, computePerceptualHash } from "@memory-vault/ai";
 import { requireAdmin } from "../middleware/requireAdmin";
 import { asyncHandler } from "../lib/asyncHandler";
+import { computeContentHash } from "../lib/contentHash";
 import type { MediaDTO } from "@memory-vault/shared";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } });
@@ -65,7 +66,9 @@ export async function streamZip(
   return archive.finalize();
 }
 
-function toDTO(m: Awaited<ReturnType<typeof db.media.findFirstOrThrow>>): MediaDTO {
+// Exported for duplicates.ts, which needs the same Media -> MediaDTO shape
+// to render duplicate-group thumbnails.
+export function toDTO(m: Awaited<ReturnType<typeof db.media.findFirstOrThrow>>): MediaDTO {
   return {
     id: m.id,
     type: m.type,
@@ -118,6 +121,10 @@ mediaRouter.post(
     let height: number | null = null;
     let exif = { takenAt: null as Date | null, latitude: null as number | null, longitude: null as number | null };
     let sizeBytes = file.buffer.length;
+    let perceptualHash: string | null = null;
+    // Computed for every upload regardless of type — this is what
+    // GET /api/duplicates uses for exact-match grouping (be/src/routes/duplicates.ts).
+    const contentHash = computeContentHash(file.buffer);
 
     if (isImage) {
       const thumb = await createThumbnail(file.buffer);
@@ -129,6 +136,8 @@ mediaRouter.post(
       width = dims.width;
       height = dims.height;
       exif = await extractExif(file.buffer);
+      // No video equivalent — see ai/src/perceptualHash.ts's doc comment.
+      perceptualHash = await computePerceptualHash(file.buffer);
     }
 
     const media = await db.media.create({
@@ -139,6 +148,8 @@ mediaRouter.post(
         width,
         height,
         sizeBytes,
+        contentHash,
+        perceptualHash,
         takenAt: exif.takenAt,
         latitude: exif.latitude,
         longitude: exif.longitude,
