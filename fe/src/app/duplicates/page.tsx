@@ -17,13 +17,13 @@ function groupKeyOf(group: Group): string {
 
 function DuplicateGroupCard({
   group,
-  keepId,
-  onSelectKeep,
+  keepIds,
+  onToggleKeep,
   onResolved,
 }: {
   group: Group;
-  keepId: string;
-  onSelectKeep: (id: string) => void;
+  keepIds: string[];
+  onToggleKeep: (id: string) => void;
   onResolved: () => void;
 }) {
   const router = useRouter();
@@ -32,23 +32,28 @@ function DuplicateGroupCard({
   const [busy, setBusy] = useState(false);
 
   const hasVideo = group.some((m) => m.type === "VIDEO");
+  // A pair only ever makes sense as "keep this one, drop the other" — the
+  // multi-keep picker is for clusters of 3+, where it's plausible more
+  // than one item genuinely deserves to survive (see onToggleKeep in the
+  // parent for the actual single- vs multi-select behavior split).
+  const allowMultiKeep = group.length > 2;
+  const removeIds = group.filter((m) => !keepIds.includes(m.id)).map((m) => m.id);
 
   async function handleMerge() {
     if (!getSessionToken()) {
       router.push(`/admin-login?next=${encodeURIComponent(pathname)}`);
       return;
     }
-    const removeIds = group.filter((m) => m.id !== keepId).map((m) => m.id);
     const ok = await confirm({
-      title: `Gộp ${group.length} mục thành 1?`,
-      description: `Giữ lại 1 mục đã chọn, ${removeIds.length} mục còn lại chuyển vào thùng rác — có thể khôi phục lại sau.`,
+      title: `Gộp ${group.length} mục thành ${keepIds.length}?`,
+      description: `Giữ lại ${keepIds.length} mục đã chọn, ${removeIds.length} mục còn lại chuyển vào thùng rác — có thể khôi phục lại sau.`,
       confirmLabel: "Gộp",
       danger: true,
     });
     if (!ok) return;
     setBusy(true);
     try {
-      await api.post("/api/duplicates/merge", { keepId, removeIds });
+      await api.post("/api/duplicates/merge", { keepIds, removeIds });
       onResolved();
     } finally {
       setBusy(false);
@@ -71,12 +76,20 @@ function DuplicateGroupCard({
         <p className="text-sm font-semibold text-ink">
           {group.length} mục {hasVideo ? "giống/tương tự nhau" : "trùng lặp hoặc rất giống nhau"}
         </p>
-        <p className="text-xs text-ink-faint">Bấm vào 1 mục để chọn ảnh/video muốn giữ lại</p>
+        <p className="text-xs text-ink-faint">
+          {allowMultiKeep ? "Bấm để chọn (có thể chọn nhiều) các mục muốn giữ lại" : "Bấm vào 1 mục để chọn ảnh/video muốn giữ lại"}
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
         {group.map((item) => (
-          <MediaCard key={item.id} media={item} selectMode selected={item.id === keepId} onOpen={() => onSelectKeep(item.id)} />
+          <MediaCard
+            key={item.id}
+            media={item}
+            selectMode
+            selected={keepIds.includes(item.id)}
+            onOpen={() => onToggleKeep(item.id)}
+          />
         ))}
       </div>
 
@@ -84,10 +97,11 @@ function DuplicateGroupCard({
         <button
           type="button"
           onClick={handleMerge}
-          disabled={busy}
+          disabled={busy || removeIds.length === 0}
+          title={removeIds.length === 0 ? "Chưa có mục nào bị loại — bỏ chọn bớt để gộp" : undefined}
           className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-strong disabled:opacity-50"
         >
-          Gộp làm 1
+          Gộp làm {keepIds.length}
         </button>
         <button
           type="button"
@@ -114,11 +128,12 @@ export default function DuplicatesPage() {
   const pathname = usePathname();
   const confirm = useConfirm();
   const [groups, setGroups] = useState<Group[] | null>(null);
-  // Which item to keep per group, keyed by groupKeyOf(group) — lifted up
+  // Which items to keep per group, keyed by groupKeyOf(group) — lifted up
   // from the card itself so "Gộp hàng loạt" can merge every group at once
-  // using whatever's currently selected in each, without needing each card
-  // to expose an imperative handle.
-  const [keepIds, setKeepIds] = useState<Record<string, string>>({});
+  // using whatever's currently selected in each. A pair always holds
+  // exactly one id (radio-style); a group of 3+ can hold more than one
+  // (see handleToggleKeep below).
+  const [keepIds, setKeepIds] = useState<Record<string, string[]>>({});
   const [scanning, setScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [bulkMerging, setBulkMerging] = useState(false);
@@ -144,7 +159,7 @@ export default function DuplicatesPage() {
       stopEasing();
       setScanProgress(100);
       setGroups(data.groups);
-      // Default each new group to keeping its newest item (groups are
+      // Default each new group to keeping just its newest item (groups are
       // built from an uploadedAt-desc list, so index 0 is newest) —
       // preserves any selection already made for a group that's still
       // present after a re-scan, rather than resetting everyone's picks.
@@ -152,7 +167,7 @@ export default function DuplicatesPage() {
         const next = { ...prev };
         for (const g of data.groups) {
           const key = groupKeyOf(g);
-          if (!next[key]) next[key] = g[0].id;
+          if (!next[key]) next[key] = [g[0].id];
         }
         return next;
       });
@@ -172,16 +187,37 @@ export default function DuplicatesPage() {
     setGroups((prev) => (prev ? prev.filter((_, i) => i !== index) : prev));
   }
 
+  // Pairs stay single-select (radio-like: clicking one replaces the pick —
+  // keeping "both" would just mean nothing to merge). Groups of 3+ toggle
+  // membership instead, and can't be emptied out entirely — there must
+  // always be at least one item left to keep.
+  function handleToggleKeep(group: Group, id: string) {
+    const key = groupKeyOf(group);
+    setKeepIds((prev) => {
+      const current = prev[key] ?? [group[0].id];
+      if (group.length <= 2) {
+        return { ...prev, [key]: [id] };
+      }
+      if (current.includes(id)) {
+        if (current.length === 1) return prev;
+        return { ...prev, [key]: current.filter((x) => x !== id) };
+      }
+      return { ...prev, [key]: [...current, id] };
+    });
+  }
+
   async function handleBulkMerge() {
     if (!groups?.length) return;
     if (!getSessionToken()) {
       router.push(`/admin-login?next=${encodeURIComponent(pathname)}`);
       return;
     }
-    const totalRemove = groups.reduce((sum, g) => sum + g.length - 1, 0);
+    const mergeable = groups.filter((g) => (keepIds[groupKeyOf(g)] ?? [g[0].id]).length < g.length);
+    if (!mergeable.length) return;
+    const totalRemove = mergeable.reduce((sum, g) => sum + g.length - (keepIds[groupKeyOf(g)] ?? [g[0].id]).length, 0);
     const ok = await confirm({
-      title: `Gộp hàng loạt ${groups.length} nhóm?`,
-      description: `Mỗi nhóm giữ lại 1 mục đang được chọn, tổng cộng ${totalRemove} mục còn lại chuyển vào thùng rác — có thể khôi phục lại sau.`,
+      title: `Gộp hàng loạt ${mergeable.length} nhóm?`,
+      description: `Mỗi nhóm giữ lại (các) mục đang được chọn, tổng cộng ${totalRemove} mục còn lại chuyển vào thùng rác — có thể khôi phục lại sau.`,
       confirmLabel: "Gộp hàng loạt",
       danger: true,
     });
@@ -190,13 +226,14 @@ export default function DuplicatesPage() {
     setBulkMerging(true);
     try {
       await Promise.all(
-        groups.map((g) => {
-          const keepId = keepIds[groupKeyOf(g)] ?? g[0].id;
-          const removeIds = g.filter((m) => m.id !== keepId).map((m) => m.id);
-          return api.post("/api/duplicates/merge", { keepId, removeIds });
+        mergeable.map((g) => {
+          const keep = keepIds[groupKeyOf(g)] ?? [g[0].id];
+          const removeIds = g.filter((m) => !keep.includes(m.id)).map((m) => m.id);
+          return api.post("/api/duplicates/merge", { keepIds: keep, removeIds });
         })
       );
-      setGroups([]);
+      const mergedKeys = new Set(mergeable.map((g) => groupKeyOf(g)));
+      setGroups((prev) => (prev ? prev.filter((g) => !mergedKeys.has(groupKeyOf(g))) : prev));
     } finally {
       setBulkMerging(false);
     }
@@ -213,7 +250,7 @@ export default function DuplicatesPage() {
         <div>
           <h1 className="font-display text-2xl font-semibold">Trùng lặp</h1>
           <p className="mt-1.5 text-sm text-ink-muted">
-            Ảnh/video giống hệt hoặc rất giống nhau — chọn 1 mục để giữ lại rồi gộp, hoặc giữ nguyên nếu không phải trùng lặp.
+            Ảnh/video giống hệt hoặc rất giống nhau — chọn mục để giữ lại rồi gộp, hoặc giữ nguyên nếu không phải trùng lặp.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -264,8 +301,8 @@ export default function DuplicatesPage() {
               <DuplicateGroupCard
                 key={key}
                 group={group}
-                keepId={keepIds[key] ?? group[0].id}
-                onSelectKeep={(id) => setKeepIds((prev) => ({ ...prev, [key]: id }))}
+                keepIds={keepIds[key] ?? [group[0].id]}
+                onToggleKeep={(id) => handleToggleKeep(group, id)}
                 onResolved={() => removeGroup(i)}
               />
             );

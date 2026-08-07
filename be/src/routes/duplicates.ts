@@ -100,19 +100,23 @@ duplicatesRouter.post(
   })
 );
 
-// Admin only: "Gộp làm 1" — soft-deletes every id in removeIds (same trash
-// flow as DELETE /api/media/:id — restorable from /trash) and keeps keepId
-// untouched. No separate "merge" data model; this just reuses soft-delete,
-// since that's the only removal concept this app has.
+// Admin only: soft-deletes every id in removeIds (same trash flow as
+// DELETE /api/media/:id — restorable from /trash) and keeps everything in
+// keepIds untouched. keepIds is an array, not a single id — a group with
+// more than 2 members can have more than one item kept (see the
+// per-group UI in fe/src/app/duplicates/page.tsx), since a cluster of 3+
+// "similar" items isn't necessarily all-one-photo. No separate "merge"
+// data model; this just reuses soft-delete, the only removal concept
+// this app has.
 duplicatesRouter.post(
   "/merge",
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const { keepId, removeIds } = req.body as { keepId?: string; removeIds?: string[] };
-    if (!keepId || !removeIds?.length) return res.status(400).json({ error: "Missing keepId or removeIds" });
+    const { keepIds, removeIds } = req.body as { keepIds?: string[]; removeIds?: string[] };
+    if (!keepIds?.length || !removeIds?.length) return res.status(400).json({ error: "Missing keepIds or removeIds" });
 
     await db.media.updateMany({
-      where: { id: { in: removeIds.filter((id) => id !== keepId) } },
+      where: { id: { in: removeIds.filter((id) => !keepIds.includes(id)) } },
       data: { deletedAt: new Date() },
     });
     res.json({ ok: true });
