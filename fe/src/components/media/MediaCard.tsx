@@ -87,7 +87,7 @@ export default function MediaCard({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={url} alt="" className="h-full w-full object-cover" />
         ) : (
-          <video src={url} className="h-full w-full object-cover" muted />
+          <video src={url} preload="metadata" className="h-full w-full object-cover" muted />
         )
       ) : null}
       {media.type === "VIDEO" && (
