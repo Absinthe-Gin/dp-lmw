@@ -11,14 +11,24 @@ import { api } from "@/lib/api-client";
 
 type Group = MediaDTO[];
 
-function DuplicateGroupCard({ group, onResolved }: { group: Group; onResolved: () => void }) {
+function groupKeyOf(group: Group): string {
+  return group.map((m) => m.id).join(",");
+}
+
+function DuplicateGroupCard({
+  group,
+  keepId,
+  onSelectKeep,
+  onResolved,
+}: {
+  group: Group;
+  keepId: string;
+  onSelectKeep: (id: string) => void;
+  onResolved: () => void;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const confirm = useConfirm();
-  // Default to keeping the newest item (list is already uploadedAt desc, so
-  // the first item in each group is the newest) — just a sensible default,
-  // the admin can click any other thumbnail to keep that one instead.
-  const [keepId, setKeepId] = useState(group[0].id);
   const [busy, setBusy] = useState(false);
 
   const hasVideo = group.some((m) => m.type === "VIDEO");
@@ -66,7 +76,7 @@ function DuplicateGroupCard({ group, onResolved }: { group: Group; onResolved: (
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
         {group.map((item) => (
-          <MediaCard key={item.id} media={item} selectMode selected={item.id === keepId} onOpen={() => setKeepId(item.id)} />
+          <MediaCard key={item.id} media={item} selectMode selected={item.id === keepId} onOpen={() => onSelectKeep(item.id)} />
         ))}
       </div>
 
@@ -100,9 +110,18 @@ function DuplicateGroupCard({ group, onResolved }: { group: Group; onResolved: (
 const SCAN_EASE_INTERVAL_MS = 120;
 
 export default function DuplicatesPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const confirm = useConfirm();
   const [groups, setGroups] = useState<Group[] | null>(null);
+  // Which item to keep per group, keyed by groupKeyOf(group) — lifted up
+  // from the card itself so "Gộp hàng loạt" can merge every group at once
+  // using whatever's currently selected in each, without needing each card
+  // to expose an imperative handle.
+  const [keepIds, setKeepIds] = useState<Record<string, string>>({});
   const [scanning, setScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
+  const [bulkMerging, setBulkMerging] = useState(false);
   const easeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function stopEasing() {
@@ -125,6 +144,18 @@ export default function DuplicatesPage() {
       stopEasing();
       setScanProgress(100);
       setGroups(data.groups);
+      // Default each new group to keeping its newest item (groups are
+      // built from an uploadedAt-desc list, so index 0 is newest) —
+      // preserves any selection already made for a group that's still
+      // present after a re-scan, rather than resetting everyone's picks.
+      setKeepIds((prev) => {
+        const next = { ...prev };
+        for (const g of data.groups) {
+          const key = groupKeyOf(g);
+          if (!next[key]) next[key] = g[0].id;
+        }
+        return next;
+      });
     } finally {
       stopEasing();
       setTimeout(() => setScanning(false), 350);
@@ -141,6 +172,36 @@ export default function DuplicatesPage() {
     setGroups((prev) => (prev ? prev.filter((_, i) => i !== index) : prev));
   }
 
+  async function handleBulkMerge() {
+    if (!groups?.length) return;
+    if (!getSessionToken()) {
+      router.push(`/admin-login?next=${encodeURIComponent(pathname)}`);
+      return;
+    }
+    const totalRemove = groups.reduce((sum, g) => sum + g.length - 1, 0);
+    const ok = await confirm({
+      title: `Gộp hàng loạt ${groups.length} nhóm?`,
+      description: `Mỗi nhóm giữ lại 1 mục đang được chọn, tổng cộng ${totalRemove} mục còn lại chuyển vào thùng rác — có thể khôi phục lại sau.`,
+      confirmLabel: "Gộp hàng loạt",
+      danger: true,
+    });
+    if (!ok) return;
+
+    setBulkMerging(true);
+    try {
+      await Promise.all(
+        groups.map((g) => {
+          const keepId = keepIds[groupKeyOf(g)] ?? g[0].id;
+          const removeIds = g.filter((m) => m.id !== keepId).map((m) => m.id);
+          return api.post("/api/duplicates/merge", { keepId, removeIds });
+        })
+      );
+      setGroups([]);
+    } finally {
+      setBulkMerging(false);
+    }
+  }
+
   // Total individual items across every group, not the group count — "3
   // nhóm" would undercount how many actual photos/videos are involved.
   const totalDuplicateCount = groups?.reduce((sum, g) => sum + g.length, 0) ?? 0;
@@ -155,14 +216,26 @@ export default function DuplicatesPage() {
             Ảnh/video giống hệt hoặc rất giống nhau — chọn 1 mục để giữ lại rồi gộp, hoặc giữ nguyên nếu không phải trùng lặp.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={runScan}
-          disabled={scanning}
-          className="whitespace-nowrap rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold hover:border-accent disabled:opacity-50"
-        >
-          {scanning ? "Đang quét..." : "⟳ Kiểm tra"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {groups && groups.length > 0 && (
+            <button
+              type="button"
+              onClick={handleBulkMerge}
+              disabled={scanning || bulkMerging}
+              className="whitespace-nowrap rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-strong disabled:opacity-50"
+            >
+              {bulkMerging ? "Đang gộp..." : "Gộp hàng loạt"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={runScan}
+            disabled={scanning || bulkMerging}
+            className="whitespace-nowrap rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold hover:border-accent disabled:opacity-50"
+          >
+            {scanning ? "Đang quét..." : "⟳ Kiểm tra"}
+          </button>
+        </div>
       </div>
 
       {scanning && (
@@ -185,9 +258,18 @@ export default function DuplicatesPage() {
 
       {groups && groups.length > 0 && (
         <div className="flex flex-col gap-4">
-          {groups.map((group, i) => (
-            <DuplicateGroupCard key={group.map((m) => m.id).join(",")} group={group} onResolved={() => removeGroup(i)} />
-          ))}
+          {groups.map((group, i) => {
+            const key = groupKeyOf(group);
+            return (
+              <DuplicateGroupCard
+                key={key}
+                group={group}
+                keepId={keepIds[key] ?? group[0].id}
+                onSelectKeep={(id) => setKeepIds((prev) => ({ ...prev, [key]: id }))}
+                onResolved={() => removeGroup(i)}
+              />
+            );
+          })}
         </div>
       )}
     </main>
