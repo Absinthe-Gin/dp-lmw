@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import type { MediaDTO } from "@memory-vault/shared";
 import MediaCard from "@/components/media/MediaCard";
@@ -92,14 +92,50 @@ function DuplicateGroupCard({ group, onResolved }: { group: Group; onResolved: (
   );
 }
 
+// Detection itself (be/src/routes/duplicates.ts) runs as one fast request —
+// there's no chunked backend job to report real per-item progress from, so
+// this bar is a client-side approximation: it eases toward 90% while the
+// request is in flight, then snaps to 100% the moment the response lands,
+// rather than fabricating a fake precise percentage tied to nothing real.
+const SCAN_EASE_INTERVAL_MS = 120;
+
 export default function DuplicatesPage() {
   const [groups, setGroups] = useState<Group[] | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
+  const easeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  function reload() {
-    api.get<{ groups: Group[] }>("/api/duplicates").then((data) => setGroups(data.groups));
+  function stopEasing() {
+    if (easeTimerRef.current) {
+      clearInterval(easeTimerRef.current);
+      easeTimerRef.current = null;
+    }
   }
 
-  useEffect(reload, []);
+  async function runScan() {
+    setScanning(true);
+    setScanProgress(0);
+    stopEasing();
+    easeTimerRef.current = setInterval(() => {
+      setScanProgress((p) => (p >= 90 ? p : p + (90 - p) * 0.15));
+    }, SCAN_EASE_INTERVAL_MS);
+
+    try {
+      const data = await api.get<{ groups: Group[] }>("/api/duplicates");
+      stopEasing();
+      setScanProgress(100);
+      setGroups(data.groups);
+    } finally {
+      stopEasing();
+      setTimeout(() => setScanning(false), 350);
+    }
+  }
+
+  useEffect(() => {
+    runScan();
+    return stopEasing;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function removeGroup(index: number) {
     setGroups((prev) => (prev ? prev.filter((_, i) => i !== index) : prev));
@@ -108,15 +144,37 @@ export default function DuplicatesPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
       <BackButton />
-      <div className="mb-6">
-        <h1 className="font-display text-2xl font-semibold">Trùng lặp</h1>
-        <p className="mt-1.5 text-sm text-ink-muted">
-          Ảnh/video giống hệt hoặc rất giống nhau — chọn 1 mục để giữ lại rồi gộp, hoặc giữ nguyên nếu không phải trùng lặp.
-        </p>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl font-semibold">Trùng lặp</h1>
+          <p className="mt-1.5 text-sm text-ink-muted">
+            Ảnh/video giống hệt hoặc rất giống nhau — chọn 1 mục để giữ lại rồi gộp, hoặc giữ nguyên nếu không phải trùng lặp.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={runScan}
+          disabled={scanning}
+          className="whitespace-nowrap rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold hover:border-accent disabled:opacity-50"
+        >
+          {scanning ? "Đang quét..." : "⟳ Kiểm tra"}
+        </button>
       </div>
 
+      {scanning && (
+        <div className="mb-6">
+          <div className="h-2 overflow-hidden rounded-full bg-surface2">
+            <div
+              className="h-full rounded-full bg-accent transition-[width] duration-150 ease-out"
+              style={{ width: `${scanProgress}%` }}
+            />
+          </div>
+          <p className="mt-1.5 text-xs text-ink-muted">Đang quét ảnh/video để tìm nội dung trùng lặp...</p>
+        </div>
+      )}
+
       {groups === null ? null : groups.length === 0 ? (
-        <p className="text-sm text-ink-muted">Không tìm thấy ảnh/video trùng lặp nào.</p>
+        !scanning && <p className="text-sm text-ink-muted">Không tìm thấy ảnh/video trùng lặp nào.</p>
       ) : (
         <div className="flex flex-col gap-4">
           {groups.map((group, i) => (
