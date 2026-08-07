@@ -16,8 +16,8 @@ const FILTERS: { value: Filter; label: string }[] = [
 ];
 
 const GROUP_OPTIONS: { value: GroupBy; label: string }[] = [
-  { value: "day", label: "Theo ngày" },
-  { value: "month", label: "Theo tháng" },
+  { value: "day", label: "Ngày" },
+  { value: "month", label: "Tháng" },
 ];
 
 function StatCard({ value, label, tone }: { value: number; label: string; tone: "accent" | "secondary" | "tertiary" }) {
