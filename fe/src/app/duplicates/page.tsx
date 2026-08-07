@@ -141,6 +141,10 @@ export default function DuplicatesPage() {
     setGroups((prev) => (prev ? prev.filter((_, i) => i !== index) : prev));
   }
 
+  // Total individual items across every group, not the group count — "3
+  // nhóm" would undercount how many actual photos/videos are involved.
+  const totalDuplicateCount = groups?.reduce((sum, g) => sum + g.length, 0) ?? 0;
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
       <BackButton />
@@ -173,9 +177,13 @@ export default function DuplicatesPage() {
         </div>
       )}
 
-      {groups === null ? null : groups.length === 0 ? (
-        !scanning && <p className="text-sm text-ink-muted">Không tìm thấy ảnh/video trùng lặp nào.</p>
-      ) : (
+      {groups !== null && !scanning && (
+        <p className="mb-4 text-sm font-semibold text-ink">
+          {totalDuplicateCount > 0 ? `Có ${totalDuplicateCount} mục đang trùng lặp.` : "Không tìm thấy ảnh/video trùng lặp nào."}
+        </p>
+      )}
+
+      {groups && groups.length > 0 && (
         <div className="flex flex-col gap-4">
           {groups.map((group, i) => (
             <DuplicateGroupCard key={group.map((m) => m.id).join(",")} group={group} onResolved={() => removeGroup(i)} />
