@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { getSessionToken, clearSessionToken } from "@/lib/session";
+import { usePathname } from "next/navigation";
 import BrandMark from "./BrandMark";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import AdminMenu from "./AdminMenu";
 
 const NAV = [
   { href: "/", label: "Trang chủ" },
@@ -16,22 +15,6 @@ const NAV = [
 
 export default function TopBar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    setIsAdmin(Boolean(getSessionToken()));
-  }, [pathname]);
-
-  function handleAdminPillClick() {
-    if (!isAdmin) {
-      router.push("/admin-login");
-      return;
-    }
-    clearSessionToken();
-    setIsAdmin(false);
-    if (pathname === "/trash") router.push("/");
-  }
 
   return (
     <header className="border-b border-border">
@@ -62,25 +45,7 @@ export default function TopBar() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          {isAdmin && (
-            <Link
-              href="/trash"
-              className={`whitespace-nowrap rounded-full border border-border px-3 py-1.5 text-xs font-semibold sm:px-3.5 ${
-                pathname === "/trash" ? "border-accent text-accent" : "text-ink-muted hover:text-ink"
-              }`}
-            >
-              Thùng rác
-            </Link>
-          )}
-          <button
-            type="button"
-            onClick={handleAdminPillClick}
-            className="flex items-center gap-2 whitespace-nowrap rounded-full border border-border px-2.5 py-1.5 text-xs text-ink-muted hover:border-accent sm:px-3"
-            title={isAdmin ? "Bấm để đăng xuất" : "Chưa đăng nhập quản trị"}
-          >
-            <span className={`h-1.5 w-1.5 rounded-full ${isAdmin ? "bg-success" : "bg-ink-faint"}`} />
-            <span className="hidden sm:inline">{isAdmin ? "Đã đăng nhập quản trị · Đăng xuất" : "Chưa đăng nhập quản trị"}</span>
-          </button>
+          <AdminMenu />
         </div>
       </div>
     </header>

@@ -1,9 +1,17 @@
 import { getSessionToken } from "./session";
+import { getSiteAccessToken } from "./siteAccess";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL as string;
 
+// Admin token takes priority (it satisfies the backend's site-access gate
+// too — see be/src/lib/auth.ts's verifyAnyAccessToken), falling back to a
+// site-access token obtained via the private-mode access-code prompt.
+function getAccessToken(): string | null {
+  return getSessionToken() ?? getSiteAccessToken();
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = getSessionToken();
+  const token = getAccessToken();
 
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
@@ -38,7 +46,7 @@ export const api = {
   // Used for zip-download endpoints, which stream a binary body instead of
   // JSON — request<T>() above always calls res.json(), so this bypasses it.
   downloadPost: async (path: string, body: unknown): Promise<{ blob: Blob; filename: string | null }> => {
-    const token = getSessionToken();
+    const token = getAccessToken();
     const res = await fetch(`${API_URL}${path}`, {
       method: "POST",
       headers: {

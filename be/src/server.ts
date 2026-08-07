@@ -4,7 +4,10 @@ import express from "express";
 import type { ErrorRequestHandler } from "express";
 import cors from "cors";
 import { attachmentDisposition } from "./lib/contentDisposition";
+import { asyncHandler } from "./lib/asyncHandler";
+import { requireSiteAccess } from "./middleware/requireSiteAccess";
 import { authRouter } from "./routes/auth";
+import { settingsRouter } from "./routes/settings";
 import { mediaRouter } from "./routes/media";
 import { albumsRouter } from "./routes/albums";
 
@@ -13,9 +16,16 @@ const app = express();
 app.use(cors({ origin: process.env.FRONTEND_ORIGIN ?? "http://localhost:3000" }));
 app.use(express.json());
 
+// Global "is the whole system private right now" gate — a no-op unless an
+// admin has switched SystemSettings.isPublic off, in which case everything
+// below except its own allowlist (see requireSiteAccess.ts) requires an
+// access-code or admin token. Must come before every router.
+app.use(asyncHandler(requireSiteAccess));
+
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 app.use("/api/auth", authRouter);
+app.use("/api/settings", settingsRouter);
 app.use("/api/media", mediaRouter);
 app.use("/api/albums", albumsRouter);
 

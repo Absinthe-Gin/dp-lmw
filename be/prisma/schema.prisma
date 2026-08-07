@@ -68,3 +68,16 @@ model AlbumMedia {
   @@id([albumId, mediaId])
   @@index([mediaId]) // "is this media in any album" lookups (auto-generate's ungrouped filter)
 }
+
+// Singleton row (fixed id "singleton", always upserted by that id — see
+// be/src/lib/systemSettings.ts) gating the whole app behind an access code
+// when isPublic is off. accessCode is stored in plain text, matching the
+// existing ADMIN_PASSWORD comparison in be/src/lib/auth.ts — this system's
+// threat model has never used hashing for its one shared secret, so this
+// stays consistent rather than introducing bcrypt for a single field.
+model SystemSettings {
+  id         String   @id @default("singleton")
+  isPublic   Boolean  @default(false)
+  accessCode String?
+  updatedAt  DateTime @updatedAt
+}
