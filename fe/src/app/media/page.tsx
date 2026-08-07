@@ -7,11 +7,17 @@ import BackButton from "@/components/ui/BackButton";
 import { api } from "@/lib/api-client";
 
 type Filter = "ALL" | "IMAGE" | "VIDEO";
+type GroupBy = "day" | "month";
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: "ALL", label: "Tất cả" },
   { value: "IMAGE", label: "Ảnh" },
   { value: "VIDEO", label: "Video" },
+];
+
+const GROUP_OPTIONS: { value: GroupBy; label: string }[] = [
+  { value: "day", label: "Theo ngày" },
+  { value: "month", label: "Theo tháng" },
 ];
 
 function StatCard({ value, label, tone }: { value: number; label: string; tone: "accent" | "secondary" | "tertiary" }) {
@@ -27,6 +33,7 @@ function StatCard({ value, label, tone }: { value: number; label: string; tone: 
 export default function MediaPage() {
   const [media, setMedia] = useState<MediaDTO[] | null>(null);
   const [filter, setFilter] = useState<Filter>("ALL");
+  const [groupBy, setGroupBy] = useState<GroupBy>("day");
 
   useEffect(() => {
     api.get<MediaDTO[]>("/api/media").then(setMedia);
@@ -72,7 +79,24 @@ export default function MediaPage() {
         <StatCard value={videoCount} label="Video" tone="secondary" />
       </div>
 
-      {filtered ? <MediaGrid items={filtered} /> : null}
+      <div className="mb-4 flex justify-end">
+        <div className="flex gap-1 rounded-full border border-border bg-surface2 p-1">
+          {GROUP_OPTIONS.map((g) => (
+            <button
+              key={g.value}
+              type="button"
+              onClick={() => setGroupBy(g.value)}
+              className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+                groupBy === g.value ? "bg-accent text-white" : "text-ink-muted hover:text-ink"
+              }`}
+            >
+              {g.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filtered ? <MediaGrid items={filtered} groupBy={groupBy} /> : null}
     </main>
   );
 }
