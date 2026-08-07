@@ -8,6 +8,16 @@ import CreateAlbumDialog from "@/components/albums/CreateAlbumDialog";
 import BackButton from "@/components/ui/BackButton";
 import { api } from "@/lib/api-client";
 
+function StatCard({ value, label, tone }: { value: number; label: string; tone: "accent" | "secondary" | "tertiary" }) {
+  const toneClass = { accent: "text-accent-strong", secondary: "text-secondary", tertiary: "text-tertiary" }[tone];
+  return (
+    <div className="flex-1 rounded-lg border border-border bg-surface px-4 py-3 sm:flex-none sm:min-w-[140px]">
+      <p className={`font-display text-2xl font-bold ${toneClass}`}>{value}</p>
+      <p className="text-xs text-ink-muted">{label}</p>
+    </div>
+  );
+}
+
 export default function AlbumsPage() {
   const router = useRouter();
   const [albums, setAlbums] = useState<AlbumDTO[]>([]);
@@ -62,6 +72,10 @@ export default function AlbumsPage() {
             + Album mới
           </button>
         </div>
+      </div>
+
+      <div className="mb-6 flex gap-3">
+        <StatCard value={albums.length} label="Album" tone="tertiary" />
       </div>
 
       <div className="relative mb-6 max-w-sm">

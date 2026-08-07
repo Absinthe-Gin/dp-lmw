@@ -14,6 +14,16 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: "VIDEO", label: "Video" },
 ];
 
+function StatCard({ value, label, tone }: { value: number; label: string; tone: "accent" | "secondary" | "tertiary" }) {
+  const toneClass = { accent: "text-accent-strong", secondary: "text-secondary", tertiary: "text-tertiary" }[tone];
+  return (
+    <div className="flex-1 rounded-lg border border-border bg-surface px-4 py-3">
+      <p className={`font-display text-2xl font-bold ${toneClass}`}>{value}</p>
+      <p className="text-xs text-ink-muted">{label}</p>
+    </div>
+  );
+}
+
 export default function MediaPage() {
   const [media, setMedia] = useState<MediaDTO[] | null>(null);
   const [filter, setFilter] = useState<Filter>("ALL");
@@ -27,6 +37,9 @@ export default function MediaPage() {
     if (filter === "ALL") return media;
     return media.filter((m) => m.type === filter);
   }, [media, filter]);
+
+  const imageCount = media?.filter((m) => m.type === "IMAGE").length ?? 0;
+  const videoCount = media?.filter((m) => m.type === "VIDEO").length ?? 0;
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
@@ -53,6 +66,12 @@ export default function MediaPage() {
           ))}
         </div>
       </div>
+
+      <div className="mb-6 flex gap-3">
+        <StatCard value={imageCount} label="Ảnh" tone="accent" />
+        <StatCard value={videoCount} label="Video" tone="secondary" />
+      </div>
+
       {filtered ? <MediaGrid items={filtered} /> : null}
     </main>
   );

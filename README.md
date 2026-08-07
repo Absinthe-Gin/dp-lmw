@@ -17,28 +17,47 @@ packages/shared/     Type dùng chung giữa fe/ và be/ (hợp đồng API)
 
 Xem CLAUDE.md để biết chi tiết từng thư mục con và trách nhiệm của từng route/module.
 
-## Bắt đầu
+## Chạy trên local (sau khi clone repo)
 
-Database và lưu trữ file đều chạy trên cloud (Supabase) — mọi người dùng cùng một dữ liệu thật, không phải bản sao riêng trên máy ai đó:
-- **Database**: Supabase Postgres (project `tokosunpcsrcgqjjdwwz`, region `ap-southeast-1`)
-- **Lưu ảnh/video**: Supabase Storage (bucket `DPLMW`), qua giao thức tương thích S3
+Hướng dẫn dưới đây chỉ cần Node.js + một Postgres bất kỳ — không phụ thuộc vào backend/database cụ thể nào của bản deploy thật (xem mục "Deploy" bên dưới nếu tò mò production dùng gì).
 
-```
+**Yêu cầu:**
+- Node.js 18+ và npm
+- Một Postgres bất kỳ để chạy `be/` (cài local, Docker, hay dịch vụ cloud miễn phí nào cũng được — repo không ràng buộc nhà cung cấp cụ thể)
+
+**Các bước:**
+
+```bash
+git clone https://github.com/Absinthe-Gin/dp-lmw.git
+cd dp-lmw
 npm install
-cp be/.env.example be/.env   # điền DATABASE_URL (Supabase) + STORAGE_* (Supabase Storage) + ADMIN_PASSWORD + JWT secret
-cp fe/.env.example fe/.env   # điền API URL
+
+# Tạo file env từ mẫu rồi tự điền giá trị của bạn
+cp be/.env.example be/.env
+cp fe/.env.example fe/.env
+```
+
+Trong `be/.env`, điền tối thiểu:
+- `DATABASE_URL` — trỏ vào Postgres của bạn (local hoặc cloud tùy bạn chọn)
+- `ADMIN_PASSWORD`, `JWT_SECRET` — tự đặt giá trị bất kỳ để test đăng nhập quản trị
+- `STORAGE_DRIVER="local"` — để lưu file thẳng vào `be/uploads/` trên máy, **không cần** tài khoản/dịch vụ lưu trữ đám mây nào để chạy thử (chỉ khi muốn dùng storage kiểu S3 thật thì mới cần điền thêm các biến `STORAGE_*` còn lại)
+
+`fe/.env` chỉ cần đúng 1 biến, giá trị mặc định trong file mẫu đã đúng cho local (`NEXT_PUBLIC_API_URL="http://localhost:4000"`).
+
+Sau đó:
+
+```bash
 npm run build -w ai -w packages/shared   # build các package nội bộ trước
-npm run -w be prisma:migrate                # chỉ cần khi đổi schema.prisma
-npm run -w be prisma:seed                   # (tuỳ chọn) tạo 4 ảnh mẫu để test tính năng gộp album
+npm run -w be prisma:generate             # bắt buộc — xem lưu ý trong CLAUDE.md
+npm run -w be prisma:migrate              # tạo schema trên Postgres của bạn
+npm run -w be prisma:seed                 # (tuỳ chọn) tạo 4 ảnh mẫu để test tính năng gộp album
+
 npm run dev:be     # http://localhost:4000
 npm run dev:fe      # http://localhost:3000
 ```
 
-Nếu không có mạng hoặc muốn dev offline: đặt `STORAGE_DRIVER=local` (ghi file vào `be/uploads/`) và trỏ `DATABASE_URL` về một Postgres cục bộ — code hỗ trợ cả hai, chỉ đổi env. Chi tiết đầy đủ về schema, index, migration, backup: xem mục "Database" trong [CLAUDE.md](./CLAUDE.md).
+Mở http://localhost:3000 — xong. Chi tiết đầy đủ về schema, index, migration, các biến env còn lại: xem mục "Database" và "Commands" trong [CLAUDE.md](./CLAUDE.md).
 
-## Thiết kế
-
-Bản thiết kế giao diện (tông xanh dương/trắng, 4 màn hình chính): xem token màu/kiểu chữ trong `fe/src/app/globals.css` và `fe/tailwind.config.ts`.
 
 ## Deploy
 
