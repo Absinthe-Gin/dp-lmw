@@ -1,16 +1,28 @@
 import sharp from "sharp";
 
-const HASH_SIZE = 8; // 8x8 grid -> 64 bits
+const HASH_SIZE = 8; // 8x8 grid -> 64 bits for the structural (dHash) component
+const DHASH_MAX_DISTANCE = 8; // out of 64 bits — recompression/minor crop/resize tolerance
+const AVG_LUMA_MAX_DIFF = 12; // out of 255 — recompression/resize brightness-shift tolerance
 
 /**
- * "Difference hash" (dHash): shrink the image to a tiny grayscale grid and
- * encode, per pixel, whether it's darker than its right neighbor. Small
- * edits — recompression, minor crop, resize, thumbnailing — barely change
- * the result, which is what makes this useful for near-duplicate detection
- * (be/src/routes/duplicates.ts compares these via Hamming distance, see
- * duplicates.ts's findDuplicateGroups). Unlike be/src/lib/contentHash.ts's
- * SHA-256, this only makes sense for images — no video equivalent here.
- * Returns a 16-char hex string (64 bits).
+ * Combined perceptual fingerprint for images: a 64-bit "difference hash"
+ * (dHash) — shrink to a tiny grayscale grid and encode whether each pixel
+ * is darker than its right neighbor — plus a 1-byte average luminance.
+ *
+ * dHash alone is blind to overall color/brightness: a perfectly flat,
+ * uniform-color region (a solid background, a blank screenshot area) has
+ * no left-right gradient anywhere, so it hashes to the same all-zero
+ * bitstring regardless of what that color actually is — an all-red photo
+ * and an all-green photo would come out perceptually identical and get
+ * wrongly clustered as duplicates. The appended luminance byte catches
+ * that case (real near-duplicates barely shift average brightness after
+ * recompression/resize, comfortably inside AVG_LUMA_MAX_DIFF; a
+ * different-colored flat image usually shifts it by far more) without
+ * needing a heavier fix like hashing actual color channels.
+ *
+ * Returns an 18-char hex string: 16 chars dHash + 2 chars average luma.
+ * Compare two outputs with areSimilar, not raw Hamming distance — the
+ * luma byte needs its own (non-bitwise) tolerance check.
  */
 export async function computePerceptualHash(buffer: Buffer): Promise<string> {
   const { data } = await sharp(buffer)
@@ -28,11 +40,16 @@ export async function computePerceptualHash(buffer: Buffer): Promise<string> {
       bits += left < right ? "1" : "0";
     }
   }
-  return BigInt(`0b${bits}`).toString(16).padStart((HASH_SIZE * HASH_SIZE) / 4, "0"); // 64 bits -> 16 hex chars
+  const dHash = BigInt(`0b${bits}`).toString(16).padStart((HASH_SIZE * HASH_SIZE) / 4, "0"); // 64 bits -> 16 hex chars
+
+  let sum = 0;
+  for (let i = 0; i < data.length; i++) sum += data[i];
+  const avgLuma = Math.round(sum / data.length);
+
+  return dHash + avgLuma.toString(16).padStart(2, "0");
 }
 
-/** Hamming distance between two hashes of the same length (in hex chars, each nibble = 4 bits). */
-export function hammingDistance(hexA: string, hexB: string): number {
+function hammingDistance(hexA: string, hexB: string): number {
   let x = BigInt(`0x${hexA}`) ^ BigInt(`0x${hexB}`);
   let count = 0;
   while (x > 0n) {
@@ -40,4 +57,12 @@ export function hammingDistance(hexA: string, hexB: string): number {
     x >>= 1n;
   }
   return count;
+}
+
+/** True if two computePerceptualHash outputs likely depict the same/near-identical image. */
+export function areSimilar(hashA: string, hashB: string): boolean {
+  const distance = hammingDistance(hashA.slice(0, 16), hashB.slice(0, 16));
+  const lumaA = parseInt(hashA.slice(16, 18), 16);
+  const lumaB = parseInt(hashB.slice(16, 18), 16);
+  return distance <= DHASH_MAX_DISTANCE && Math.abs(lumaA - lumaB) <= AVG_LUMA_MAX_DIFF;
 }

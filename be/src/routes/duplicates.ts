@@ -19,26 +19,34 @@ function groupKeyOf(ids: string[]): string {
  * contentHash/perceptualHash are only computed at upload time (media.ts),
  * so anything uploaded before that existed has neither — meaning real
  * duplicates among older media were silently never detected. Self-heals
- * that here: re-downloads the original bytes for every still-untracked
- * item and hashes it, same as upload does, so it participates in
- * detection from then on. Runs at the top of GET / below (which is what
- * both the initial page load and the "Kiểm tra" button call), so the
- * first scan after deploy does real work proportional to library size and
- * every scan after that is a no-op once nothing is left untracked.
- * A single unreadable file shouldn't abort the whole scan, so failures
- * are logged and skipped rather than thrown.
+ * that here: re-downloads the original bytes for every row missing either
+ * hash and (re-)computes it, same as upload does, so it participates in
+ * detection from then on. Also picks up rows whose perceptualHash was
+ * deliberately reset to null after ai/src/perceptualHash.ts's algorithm
+ * changed (its old dHash-only format falsely matched any two flat-color
+ * images of different hues — see the fix's commit — so every existing
+ * value had to be invalidated and recomputed under the new format, not
+ * just backfilled for rows that never had one). Runs at the top of GET /
+ * below (both the initial page load and "Kiểm tra" call it), so the first
+ * scan after a hash-format change does real work proportional to how much
+ * needs recomputing and every scan after that is a no-op. A single
+ * unreadable file shouldn't abort the whole scan, so failures are logged
+ * and skipped rather than thrown.
  */
 async function backfillMissingHashes(): Promise<void> {
   const untracked = await db.media.findMany({
-    where: { deletedAt: null, contentHash: null },
-    select: { id: true, storageKey: true, type: true },
+    where: {
+      deletedAt: null,
+      OR: [{ contentHash: null }, { AND: [{ type: "IMAGE" }, { perceptualHash: null }] }],
+    },
+    select: { id: true, storageKey: true, type: true, contentHash: true, perceptualHash: true },
   });
 
   for (const m of untracked) {
     try {
       const buffer = await getObjectBuffer(m.storageKey);
-      const contentHash = computeContentHash(buffer);
-      const perceptualHash = m.type === "IMAGE" ? await computePerceptualHash(buffer) : null;
+      const contentHash = m.contentHash ?? computeContentHash(buffer);
+      const perceptualHash = m.type === "IMAGE" ? m.perceptualHash ?? (await computePerceptualHash(buffer)) : null;
       await db.media.update({ where: { id: m.id }, data: { contentHash, perceptualHash } });
     } catch (err) {
       console.error(`[duplicates] failed to backfill hash for media ${m.id}:`, err);

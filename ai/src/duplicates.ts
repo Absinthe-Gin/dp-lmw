@@ -1,14 +1,10 @@
-import { hammingDistance } from "./perceptualHash";
+import { areSimilar } from "./perceptualHash";
 
 export interface DuplicatePoint {
   id: string;
   contentHash: string | null;
   perceptualHash: string | null; // images only
 }
-
-// Out of 64 bits — a commonly-used dHash threshold: catches recompression,
-// minor crops, and resizes without flagging genuinely different photos.
-const PERCEPTUAL_HASH_MAX_DISTANCE = 8;
 
 /**
  * Clusters media into duplicate groups: exact matches (same contentHash,
@@ -59,7 +55,7 @@ export function findDuplicateGroups<T extends DuplicatePoint>(media: T[]): T[][]
     for (let j = i + 1; j < withPerceptualHash.length; j++) {
       const a = withPerceptualHash[i];
       const b = withPerceptualHash[j];
-      if (hammingDistance(a.perceptualHash!, b.perceptualHash!) <= PERCEPTUAL_HASH_MAX_DISTANCE) {
+      if (areSimilar(a.perceptualHash!, b.perceptualHash!)) {
         union(a.id, b.id);
       }
     }
