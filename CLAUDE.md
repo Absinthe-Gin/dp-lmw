@@ -81,7 +81,7 @@ Four workspaces, each with a distinct responsibility. Reading only one is usuall
   - `grouping.ts` — `groupByDate`/`groupByLocation`: pure functions over plain `{ id, takenAt, latitude, longitude }` points, no I/O. `be/src/routes/albums.ts` fetches ungrouped `Media` rows, calls these, then persists the resulting groups as `Album` rows itself.
   - `exif.ts` / `thumbnail.ts` — EXIF extraction and thumbnail generation, invoked from `be/src/routes/media.ts` during upload.
   - `tagging.ts` — placeholder for future LLM-based captioning/album-title suggestions; not wired up.
-  - `video.ts` — placeholder for turning an album into a slideshow/video (ffmpeg-based). `be`'s `POST /api/albums/:id/video` calls it and returns 501 until it's implemented — that's the "tạo video" feature, deliberately stubbed rather than half-built.
+  - No video/slideshow generation module — the earlier "tạo video từ album" button called a stub (`POST /api/albums/:id/video`, always 501) and was removed rather than implemented. Replaced by `fe/src/components/albums/AlbumSlideshow.tsx`'s "▶ Trình chiếu" button on the album detail page: a fully client-side full-screen slideshow (no encoding, no backend route) that cycles through the album's existing signed full-size URLs — click/arrow-keys to navigate, auto-advances every 5s otherwise, restarting the countdown on manual navigation.
 - **`packages/shared`** (`@memory-vault/shared`) — the API contract: `MediaDTO`/`AlbumDTO`/`AlbumDetailDTO` types imported by both `fe` and `be` so their view of a resource can't silently drift apart. Dates cross the wire as ISO strings, not `Date` objects.
 
 ### Media display flow

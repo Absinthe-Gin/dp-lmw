@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../lib/db";
-import { groupByDate, generateAlbumSlideshow } from "@memory-vault/ai";
+import { groupByDate } from "@memory-vault/ai";
 import { requireAdmin } from "../middleware/requireAdmin";
 import { asyncHandler } from "../lib/asyncHandler";
 import { streamZip } from "./media";
@@ -261,22 +261,5 @@ albumsRouter.post(
     }
 
     res.json({ created: created.length, albums: created });
-  })
-);
-
-/**
- * Public, but currently a stub — ai/src/video.ts's slideshow generator
- * isn't implemented yet. Returns 501 until that's wired up.
- */
-albumsRouter.post(
-  "/:id/video",
-  asyncHandler(async (req, res) => {
-    const album = await db.album.findUnique({ where: { id: req.params.id }, include: { media: { include: { media: true } } } });
-    if (!album) return res.status(404).json({ error: "Not found" });
-
-    const result = await generateAlbumSlideshow(album.media.map((am) => am.media.storageKey));
-    if (!result) return res.status(501).json({ error: "Tính năng tạo video đang được phát triển" });
-
-    res.json(result);
   })
 );

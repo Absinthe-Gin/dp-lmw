@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { AlbumDetailDTO } from "@memory-vault/shared";
 import MediaGrid from "@/components/media/MediaGrid";
 import AddMediaDialog from "@/components/albums/AddMediaDialog";
+import AlbumSlideshow from "@/components/albums/AlbumSlideshow";
 import BackButton from "@/components/ui/BackButton";
 import { api } from "@/lib/api-client";
 import { recordView } from "@/lib/recentlyViewed";
@@ -17,6 +18,7 @@ export default function AlbumDetailPage({ params }: { params: { id: string } }) 
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
   const [showAddMedia, setShowAddMedia] = useState(false);
+  const [showSlideshow, setShowSlideshow] = useState(false);
 
   function reload() {
     api.get<AlbumDetailDTO>(`/api/albums/${params.id}`).then(setAlbum);
@@ -145,12 +147,15 @@ export default function AlbumDetailPage({ params }: { params: { id: string } }) 
               Tải xuống (.zip)
             </a>
           )}
-          <button
-            type="button"
-            className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold hover:border-accent"
-          >
-            Tạo video từ album
-          </button>
+          {album.mediaCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowSlideshow(true)}
+              className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold hover:border-accent"
+            >
+              ▶ Trình chiếu
+            </button>
+          )}
         </div>
       </div>
       <MediaGrid
@@ -165,6 +170,7 @@ export default function AlbumDetailPage({ params }: { params: { id: string } }) 
           onAdd={handleAddMedia}
         />
       )}
+      {showSlideshow && <AlbumSlideshow items={album.media} onClose={() => setShowSlideshow(false)} />}
     </main>
   );
 }
