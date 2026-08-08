@@ -11,9 +11,14 @@ const AUTO_ADVANCE_MS = 5000;
  * video từ album" button (which only ever called a stubbed 501 endpoint,
  * ai/src/video.ts). Entirely client-side: no encoding, just cycling
  * through the same signed full-size URLs MediaLightbox already uses.
- * Click anywhere (or the arrow keys) to advance/go back manually; auto-
- * advances every 5s otherwise, restarting the countdown on any manual
- * navigation so a click doesn't get immediately overridden by the timer.
+ * Click anywhere (or the arrow keys) to advance/go back manually.
+ *
+ * Auto-advance: images use a flat 5s timer. Videos DON'T — a video longer
+ * than 5s would otherwise get cut off mid-playback, which defeats the
+ * point of including it. Videos instead advance on their own "ended"
+ * event (see the <video onEnded> below), so a video always plays to
+ * completion before the slideshow moves on, however long that takes; a
+ * click still skips it early either way.
  */
 export default function AlbumSlideshow({ items, onClose }: { items: MediaDTO[]; onClose: () => void }) {
   const [index, setIndex] = useState(0);
@@ -39,6 +44,7 @@ export default function AlbumSlideshow({ items, onClose }: { items: MediaDTO[]; 
   }
 
   useEffect(() => {
+    if (current.type === "VIDEO") return; // advances via onEnded on the <video> below instead
     const timer = setTimeout(next, AUTO_ADVANCE_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -106,7 +112,7 @@ export default function AlbumSlideshow({ items, onClose }: { items: MediaDTO[]; 
           // eslint-disable-next-line @next/next/no-img-element
           <img src={url} alt="" className="max-h-full max-w-full object-contain" />
         ) : (
-          <video src={url} className="max-h-full max-w-full object-contain" autoPlay muted playsInline />
+          <video src={url} className="max-h-full max-w-full object-contain" autoPlay muted playsInline onEnded={next} />
         ))}
     </div>
   );

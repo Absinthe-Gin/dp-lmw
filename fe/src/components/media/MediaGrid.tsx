@@ -82,7 +82,7 @@ export default function MediaGrid({
     }
     const ok = await confirm({
       title: `Xóa ${selectedIds.size} mục đã chọn?`,
-      description: "Chuyển vào thùng rác — có thể khôi phục lại sau.",
+      description: "Chuyển vào thùng rác",
       confirmLabel: "Xóa",
       danger: true,
     });
