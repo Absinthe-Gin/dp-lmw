@@ -3,6 +3,7 @@ import { Merriweather, Open_Sans, IBM_Plex_Mono } from "next/font/google";
 import TopBar from "@/components/layout/TopBar";
 import BackgroundBubbles from "@/components/layout/BackgroundBubbles";
 import SiteAccessGate from "@/components/layout/SiteAccessGate";
+import AccessTracker from "@/components/layout/AccessTracker";
 import { ConfirmDialogProvider } from "@/components/ui/ConfirmDialogProvider";
 import ScrollToTopButton from "@/components/ui/ScrollToTopButton";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
@@ -48,6 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen bg-bg font-sans text-ink antialiased">
         <BackgroundBubbles />
+        <AccessTracker />
         <ConfirmDialogProvider>
           <SiteAccessGate>
             <TopBar />

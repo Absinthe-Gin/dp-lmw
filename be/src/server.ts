@@ -11,8 +11,16 @@ import { settingsRouter } from "./routes/settings";
 import { mediaRouter } from "./routes/media";
 import { albumsRouter } from "./routes/albums";
 import { duplicatesRouter } from "./routes/duplicates";
+import { accessLogsRouter } from "./routes/accessLogs";
 
 const app = express();
+
+// Render (and most PaaS hosts) put the app behind a reverse proxy, so
+// req.socket's address is the proxy's, not the visitor's — this makes
+// Express trust X-Forwarded-For and populate req.ip with the real client
+// IP instead. Needed for accessLogs.ts's IP logging to record anything
+// meaningful in production (in local dev this just yields ::1/127.0.0.1).
+app.set("trust proxy", true);
 
 app.use(cors({ origin: process.env.FRONTEND_ORIGIN ?? "http://localhost:3000" }));
 app.use(express.json());
@@ -30,6 +38,7 @@ app.use("/api/settings", settingsRouter);
 app.use("/api/media", mediaRouter);
 app.use("/api/albums", albumsRouter);
 app.use("/api/duplicates", duplicatesRouter);
+app.use("/api/access-logs", accessLogsRouter);
 
 // Backs the "local" storage driver only (be/src/lib/storage.ts) — dev/no-cloud-creds
 // fallback. In production STORAGE_DRIVER=s3 and this route serves nothing.

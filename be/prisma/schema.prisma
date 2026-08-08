@@ -103,3 +103,23 @@ model IgnoredDuplicateGroup {
   groupKey  String   @unique
   createdAt DateTime @default(now())
 }
+
+// One row per "visit" (a burst of activity from one browser, not one
+// request) — be/src/routes/accessLogs.ts's POST /ping upserts into this:
+// a new row is created the first time a given visitorId is seen (or seen
+// again after being idle past the "active" window), and lastSeenAt is
+// bumped on every ping after that. Duration is derived (lastSeenAt -
+// startedAt), not stored, so it's always accurate as of the last ping —
+// see fe/src/app/access/page.tsx (site-admin "Quản lý truy cập" screen).
+model AccessLog {
+  id         String   @id @default(cuid())
+  visitorId  String // random id generated client-side (fe/src/lib/visitorId.ts), persisted in localStorage
+  ipAddress  String
+  location   String? // "City, Country" from a best-effort free geo-IP lookup; null for local/private IPs or a failed lookup
+  userAgent  String?
+  startedAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([visitorId])
+  @@index([lastSeenAt]) // GET / orders by this
+}

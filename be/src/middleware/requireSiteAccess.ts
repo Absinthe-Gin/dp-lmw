@@ -10,7 +10,17 @@ import { verifyAnyAccessToken } from "../lib/auth";
 // unsigned static route (dev-only — s3 in production, see storage.ts) and
 // is left open for the same reason S3 signed URLs aren't re-checked here:
 // this gate protects discovery of the app, not already-issued file links.
-const ALWAYS_ALLOWED = ["/health", "/api/auth/admin-login", "/api/settings/public-status", "/api/settings/verify-access"];
+// access-logs/ping records a visit regardless of whether it's ever let
+// past the gate — logging "someone hit a private system and was blocked"
+// is itself useful, and gating it would be circular anyway (recording the
+// visit shouldn't require having already gotten in).
+const ALWAYS_ALLOWED = [
+  "/health",
+  "/api/auth/admin-login",
+  "/api/settings/public-status",
+  "/api/settings/verify-access",
+  "/api/access-logs/ping",
+];
 
 function isAlwaysAllowed(path: string): boolean {
   return ALWAYS_ALLOWED.includes(path) || path.startsWith("/files/");
