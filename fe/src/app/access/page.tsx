@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { getSessionToken } from "@/lib/session";
+import { useConfirm } from "@/components/ui/ConfirmDialogProvider";
 import BackButton from "@/components/ui/BackButton";
 import PublicAccessToggle from "@/components/settings/PublicAccessToggle";
 
@@ -29,12 +30,14 @@ function formatDuration(sec: number): string {
 
 export default function AccessPage() {
   const router = useRouter();
+  const confirm = useConfirm();
   const [logs, setLogs] = useState<AccessLogEntry[] | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function reload() {
-    api
+    return api
       .get<AccessLogEntry[]>("/api/access-logs")
       .then((data) => {
         setLogs(data);
@@ -43,6 +46,15 @@ export default function AccessPage() {
       .catch(() => {
         // A single missed poll shouldn't wipe the last known list off the screen.
       });
+  }
+
+  async function handleManualRefresh() {
+    setRefreshing(true);
+    try {
+      await reload();
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   useEffect(() => {
@@ -58,6 +70,18 @@ export default function AccessPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  async function handleDelete(id: string) {
+    const ok = await confirm({
+      title: "Xoá nhật ký truy cập này?",
+      description: "Chỉ xoá bản ghi — không ảnh hưởng gì đến thiết bị đang truy cập, nếu vẫn đang mở app thì sẽ được ghi lại thành lượt mới.",
+      confirmLabel: "Xoá",
+      danger: true,
+    });
+    if (!ok) return;
+    await api.delete(`/api/access-logs/${id}`);
+    setLogs((prev) => (prev ? prev.filter((l) => l.id !== id) : prev));
+  }
+
   if (!logs) return null;
 
   const activeCount = logs.filter((l) => l.isActive).length;
@@ -70,11 +94,21 @@ export default function AccessPage() {
           <h1 className="font-display text-2xl font-semibold">Quản lý truy cập</h1>
           <p className="mt-1.5 text-sm text-ink-muted">Thiết bị đã truy cập hệ thống — IP, vị trí và thời lượng.</p>
         </div>
-        <span className="flex items-center gap-1.5 whitespace-nowrap text-xs text-ink-faint">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" />
-          Tự cập nhật mỗi {POLL_INTERVAL_MS / 1000}s
-          {lastUpdated && <span className="font-mono">· {lastUpdated.toLocaleTimeString("vi-VN")}</span>}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1.5 whitespace-nowrap text-xs text-ink-faint">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" />
+            Tự cập nhật mỗi {POLL_INTERVAL_MS / 1000}s
+            {lastUpdated && <span className="font-mono">· {lastUpdated.toLocaleTimeString("vi-VN")}</span>}
+          </span>
+          <button
+            type="button"
+            onClick={handleManualRefresh}
+            disabled={refreshing}
+            className="whitespace-nowrap rounded-lg border border-border bg-surface px-3.5 py-1.5 text-sm font-semibold hover:border-accent disabled:opacity-50"
+          >
+            {refreshing ? "Đang làm mới..." : "⟳ Làm mới"}
+          </button>
+        </div>
       </div>
 
       <section className="mb-6 rounded-xl border border-border bg-surface p-5">
@@ -104,6 +138,7 @@ export default function AccessPage() {
                 <th className="px-4 py-3">Vị trí</th>
                 <th className="px-4 py-3">Bắt đầu</th>
                 <th className="px-4 py-3">Thời lượng</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
@@ -121,6 +156,17 @@ export default function AccessPage() {
                     {new Date(l.startedAt).toLocaleString("vi-VN")}
                   </td>
                   <td className="px-4 py-3">{formatDuration(l.durationSec)}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(l.id)}
+                      aria-label="Xoá nhật ký"
+                      title="Xoá nhật ký"
+                      className="rounded-md px-2 py-1 text-xs text-ink-faint hover:bg-danger hover:text-white"
+                    >
+                      ×
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

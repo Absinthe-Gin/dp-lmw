@@ -71,3 +71,18 @@ accessLogsRouter.get(
     );
   })
 );
+
+// Admin only: deletes one log row — purely a log-cleanup action, nothing
+// else. Doesn't touch the visitor it belonged to in any way: if that
+// visitorId is still actively pinging, the very next POST /ping above
+// finds no existing row (it was just deleted) and simply starts a fresh
+// one, same as any brand-new visit. Never blocks, disconnects, or
+// otherwise affects whoever's currently browsing.
+accessLogsRouter.delete(
+  "/:id",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    await db.accessLog.deleteMany({ where: { id: req.params.id } }); // deleteMany so an already-gone id is a no-op, not a 404/500
+    res.json({ ok: true });
+  })
+);
