@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
-import { getSessionToken } from "@/lib/session";
+import { getSessionToken, clearSessionToken } from "@/lib/session";
+import { isAdminUnauthorized } from "@/lib/adminAuthError";
 import { useConfirm } from "@/components/ui/ConfirmDialogProvider";
 import BackButton from "@/components/ui/BackButton";
 import PublicAccessToggle from "@/components/settings/PublicAccessToggle";
@@ -43,8 +44,18 @@ export default function AccessPage() {
         setLogs(data);
         setLastUpdated(new Date());
       })
-      .catch(() => {
-        // A single missed poll shouldn't wipe the last known list off the screen.
+      .catch((err) => {
+        if (isAdminUnauthorized(err)) {
+          // The admin session expired mid-visit (JWTs last 12h) — polling
+          // forever with a 401 every 15s and nothing to show for it is
+          // worse than just sending them back to log in again.
+          if (pollRef.current) clearInterval(pollRef.current);
+          clearSessionToken();
+          router.push("/admin-login?next=/access");
+          return;
+        }
+        // Any other failure (e.g. a transient network hiccup) — a single
+        // missed poll shouldn't wipe the last known list off the screen.
       });
   }
 

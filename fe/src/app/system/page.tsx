@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
-import { getSessionToken } from "@/lib/session";
+import { getSessionToken, clearSessionToken } from "@/lib/session";
+import { isAdminUnauthorized } from "@/lib/adminAuthError";
 import BackButton from "@/components/ui/BackButton";
 
 const POLL_INTERVAL_MS = 5000;
@@ -45,8 +46,17 @@ export default function SystemPage() {
         setUsage(data);
         setLastUpdated(new Date());
       })
-      .catch(() => {
-        // A single missed poll (e.g. Render cold-starting) shouldn't wipe the
+      .catch((err) => {
+        if (isAdminUnauthorized(err)) {
+          // The admin session expired mid-visit — polling forever with a
+          // 401 every 5s and nothing to show for it is worse than just
+          // sending them back to log in again.
+          if (pollRef.current) clearInterval(pollRef.current);
+          clearSessionToken();
+          router.push("/admin-login?next=/system");
+          return;
+        }
+        // Any other failure (e.g. Render cold-starting) shouldn't wipe the
         // last known numbers off the screen — just skip this tick.
       });
   }

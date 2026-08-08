@@ -3,6 +3,20 @@ import { getSiteAccessToken } from "./siteAccess";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL as string;
 
+/**
+ * Thrown by request()/downloadPost() on a non-ok response, carrying the
+ * HTTP status so callers can react to specific cases (401 -> the admin
+ * token is missing/expired, see lib/adminAuthError.ts) instead of every
+ * failure looking like an opaque generic Error.
+ */
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
 // Admin token takes priority (it satisfies the backend's site-access gate
 // too — see be/src/lib/auth.ts's verifyAnyAccessToken), falling back to a
 // site-access token obtained via the private-mode access-code prompt.
@@ -22,7 +36,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!res.ok) {
-    throw new Error(`API ${path} failed: ${res.status} ${await res.text()}`);
+    throw new ApiError(res.status, `API ${path} failed: ${res.status} ${await res.text()}`);
   }
   return res.json();
 }
@@ -55,7 +69,7 @@ export const api = {
       },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error(`API ${path} failed: ${res.status} ${await res.text()}`);
+    if (!res.ok) throw new ApiError(res.status, `API ${path} failed: ${res.status} ${await res.text()}`);
     const disposition = res.headers.get("Content-Disposition");
     const filename = disposition?.match(/filename="?([^"]+)"?/)?.[1] ?? null;
     return { blob: await res.blob(), filename };
