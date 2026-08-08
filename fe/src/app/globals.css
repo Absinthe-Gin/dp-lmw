@@ -56,6 +56,28 @@ body {
   color: var(--ink);
 }
 
+/* Applied for 3s by lib/theme.ts's applyTheme() while a light/dark toggle
+   is in flight, so the color swap fades instead of flipping instantly —
+   jarring at night otherwise. Scoped to this temporary class (removed
+   right after) rather than a permanent global transition, so it doesn't
+   also slow down unrelated hover/focus color transitions elsewhere. */
+.theme-transitioning,
+.theme-transitioning * {
+  transition:
+    background-color 3s ease,
+    color 3s ease,
+    border-color 3s ease,
+    fill 3s ease,
+    stroke 3s ease !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-transitioning,
+  .theme-transitioning * {
+    transition: none !important;
+  }
+}
+
 /* BackgroundBubbles.tsx renders both layers unconditionally; which one is
    visible is decided here purely off the data-theme attribute, so toggling
    theme swaps the decoration instantly with no React re-render. */

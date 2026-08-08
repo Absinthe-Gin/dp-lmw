@@ -12,10 +12,24 @@ export function getStoredTheme(): Theme {
   return localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
 }
 
-/** Applies the theme to the document root and persists it for next visit. */
+const TRANSITION_MS = 3000;
+
+/**
+ * Applies the theme to the document root and persists it for next visit.
+ * Fades colors over TRANSITION_MS instead of switching instantly — an
+ * instant flip from light to dark (or back) is jarring if you're toggling
+ * it at night. The fade is done via a temporary class (see globals.css's
+ * .theme-transitioning rule) added just before the attribute changes and
+ * removed once the fade finishes, rather than a permanent global
+ * transition — leaving one on every element all the time would also slow
+ * down unrelated hover/focus color transitions elsewhere in the app.
+ */
 export function applyTheme(theme: Theme) {
-  document.documentElement.setAttribute("data-theme", theme);
+  const root = document.documentElement;
+  root.classList.add("theme-transitioning");
+  root.setAttribute("data-theme", theme);
   localStorage.setItem(THEME_KEY, theme);
+  window.setTimeout(() => root.classList.remove("theme-transitioning"), TRANSITION_MS);
 }
 
 /**
