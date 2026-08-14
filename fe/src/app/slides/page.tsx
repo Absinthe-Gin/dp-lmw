@@ -3,11 +3,32 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { HomeSlideDTO } from "@memory-vault/shared";
-import { api } from "@/lib/api-client";
+import { api, ApiError } from "@/lib/api-client";
 import { getSessionToken, clearSessionToken } from "@/lib/session";
 import { isAdminUnauthorized } from "@/lib/adminAuthError";
 import { useConfirm } from "@/components/ui/ConfirmDialogProvider";
 import BackButton from "@/components/ui/BackButton";
+
+// api-client.ts's ApiError.message is "API <path> failed: <status> <body text>"
+// where <body text> is the raw JSON the backend sent (e.g. our route's own
+// `{ error: "Chỉ chấp nhận ảnh — ..." }`) — pull the real reason out of it
+// instead of always showing the same static "only images allowed" text
+// regardless of what actually went wrong (wrong file type, network error,
+// server error, ...).
+function serverErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    const jsonStart = err.message.indexOf("{");
+    if (jsonStart !== -1) {
+      try {
+        const parsed = JSON.parse(err.message.slice(jsonStart)) as { error?: string };
+        if (parsed.error) return parsed.error;
+      } catch {
+        // fall through to the generic message below
+      }
+    }
+  }
+  return "vui lòng thử lại.";
+}
 
 function SlideThumb({ slide }: { slide: HomeSlideDTO }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -77,8 +98,17 @@ export default function SlidesAdminPage() {
       Array.from(files).forEach((file) => formData.append("files", file));
       await api.upload<HomeSlideDTO[]>("/api/home-slides", formData);
       reload();
-    } catch {
-      setUploadError("Tải lên thất bại — chỉ chấp nhận tệp ảnh (JPG, PNG, ...).");
+    } catch (err) {
+      if (isAdminUnauthorized(err)) {
+        // Same expired-session handling as reload()'s poll below — without
+        // this, an admin whose 12h session lapsed mid-visit would just see
+        // a generic "upload failed" message that reads as if their photos
+        // were rejected, when the real cause is needing to log in again.
+        clearSessionToken();
+        router.push("/admin-login?next=/slides");
+        return;
+      }
+      setUploadError(`Tải lên thất bại — ${serverErrorMessage(err)}`);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
