@@ -11,11 +11,18 @@ export const settingsRouter = Router();
 // frontend calls this on every load to decide whether to show the
 // access-code gate at all, before it knows if it's allowed to call
 // anything else. Never returns the code itself, only whether one is set.
+// Also doubles as the public source for homeSlideIntervalSec — the home
+// page's slideshow (fe/src/components/home/HomeSlideshow.tsx) needs that
+// value too and there's no reason to gate it behind admin.
 settingsRouter.get(
   "/public-status",
   asyncHandler(async (_req, res) => {
     const settings = await getSystemSettings();
-    res.json({ isPublic: settings.isPublic, hasAccessCode: Boolean(settings.accessCode) });
+    res.json({
+      isPublic: settings.isPublic,
+      hasAccessCode: Boolean(settings.accessCode),
+      homeSlideIntervalSec: settings.homeSlideIntervalSec,
+    });
   })
 );
 
@@ -34,24 +41,30 @@ settingsRouter.post(
   })
 );
 
-// Admin only: flip public/private, set a new access code, and/or set the
-// storage quota threshold. Any field can be sent alone (e.g. just toggling
-// isPublic without touching a previously-set code, so turning private back
-// on later doesn't require re-entering the code).
+// Admin only: flip public/private, set a new access code, set the storage
+// quota threshold, and/or set the home-slideshow interval. Any field can
+// be sent alone (e.g. just toggling isPublic without touching a
+// previously-set code, so turning private back on later doesn't require
+// re-entering the code).
 settingsRouter.patch(
   "/",
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const { isPublic, accessCode, storageQuotaBytes } = req.body as {
+    const { isPublic, accessCode, storageQuotaBytes, homeSlideIntervalSec } = req.body as {
       isPublic?: boolean;
       accessCode?: string;
       storageQuotaBytes?: number;
+      homeSlideIntervalSec?: number;
     };
-    const settings = await updateSystemSettings({ isPublic, accessCode, storageQuotaBytes });
+    if (homeSlideIntervalSec !== undefined && (!Number.isFinite(homeSlideIntervalSec) || homeSlideIntervalSec < 1)) {
+      return res.status(400).json({ error: "homeSlideIntervalSec phải là số nguyên >= 1" });
+    }
+    const settings = await updateSystemSettings({ isPublic, accessCode, storageQuotaBytes, homeSlideIntervalSec });
     res.json({
       isPublic: settings.isPublic,
       hasAccessCode: Boolean(settings.accessCode),
       storageQuotaBytes: settings.storageQuotaBytes,
+      homeSlideIntervalSec: settings.homeSlideIntervalSec,
     });
   })
 );

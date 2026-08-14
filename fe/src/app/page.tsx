@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { AlbumDTO, MediaDTO } from "@memory-vault/shared";
 import AlbumGrid from "@/components/albums/AlbumGrid";
 import MediaGrid from "@/components/media/MediaGrid";
+import HomeSlideshow from "@/components/home/HomeSlideshow";
 import { api } from "@/lib/api-client";
 import { getRecentIds } from "@/lib/recentlyViewed";
 
@@ -51,6 +52,8 @@ export default function HomePage() {
           + Tải lên
         </Link>
       </div>
+
+      <HomeSlideshow />
 
       <div className="mb-8 flex flex-col gap-4 sm:flex-row">
         <Link href="/albums" className="flex-1 rounded-lg border border-border bg-surface px-5 py-4 hover:border-accent">

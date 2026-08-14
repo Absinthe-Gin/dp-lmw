@@ -12,6 +12,7 @@ import { mediaRouter } from "./routes/media";
 import { albumsRouter } from "./routes/albums";
 import { duplicatesRouter } from "./routes/duplicates";
 import { accessLogsRouter } from "./routes/accessLogs";
+import { homeSlidesRouter } from "./routes/homeSlides";
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.use("/api/media", mediaRouter);
 app.use("/api/albums", albumsRouter);
 app.use("/api/duplicates", duplicatesRouter);
 app.use("/api/access-logs", accessLogsRouter);
+app.use("/api/home-slides", homeSlidesRouter);
 
 // Backs the "local" storage driver only (be/src/lib/storage.ts) — dev/no-cloud-creds
 // fallback. In production STORAGE_DRIVER=s3 and this route serves nothing.

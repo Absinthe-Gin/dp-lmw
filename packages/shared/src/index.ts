@@ -27,3 +27,13 @@ export interface AlbumDTO {
 export interface AlbumDetailDTO extends AlbumDTO {
   media: MediaDTO[];
 }
+
+// Curated home-page hero slideshow content — deliberately separate from
+// MediaDTO (images only, admin-curated, no takenAt/gps/duration).
+export interface HomeSlideDTO {
+  id: string;
+  thumbnailUrl: string | null;
+  width: number | null;
+  height: number | null;
+  createdAt: string;
+}

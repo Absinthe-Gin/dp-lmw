@@ -80,17 +80,35 @@ model AlbumMedia {
 // threat model has never used hashing for its one shared secret, so this
 // stays consistent rather than introducing bcrypt for a single field.
 model SystemSettings {
-  id                String   @id @default("singleton")
-  isPublic          Boolean  @default(false)
-  accessCode        String?
+  id                   String   @id @default("singleton")
+  isPublic             Boolean  @default(false)
+  accessCode           String?
   // Admin-editable estimate, in bytes — there is no API to read the real
   // limit off the actual storage provider (checked Supabase Storage and
   // Render both directly; neither exposes account-level quota/usage via a
   // public API), so this is a manually-set threshold the admin compares
   // real usage against on the system-management page, not an authoritative
   // number pulled from the provider. Default 1 GiB.
-  storageQuotaBytes Float    @default(1073741824)
-  updatedAt         DateTime @updatedAt
+  storageQuotaBytes    Float    @default(1073741824)
+  // Auto-advance interval for the home-page slideshow (HomeSlide below),
+  // in seconds — admin-editable from /slides ("Quản lý slide").
+  homeSlideIntervalSec Int      @default(5)
+  updatedAt            DateTime @updatedAt
+}
+
+// Curated images for the home-page hero slideshow (fe/src/components/home/HomeSlideshow.tsx)
+// — deliberately separate from Media: admin-only content management, images
+// only (no video), not part of the general library/albums/duplicate
+// detection. Ordered by createdAt asc (upload order) wherever listed.
+model HomeSlide {
+  id           String   @id @default(cuid())
+  storageKey   String   @unique
+  thumbnailKey String?
+  width        Int?
+  height       Int?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 // Records a duplicate cluster the admin/viewer explicitly dismissed

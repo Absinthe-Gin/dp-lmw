@@ -91,6 +91,15 @@ export default function AdminMenu() {
               >
                 Quản lý truy cập
               </Link>
+              <Link
+                href="/slides"
+                onClick={() => setOpen(false)}
+                className={`block rounded-md px-3 py-2 text-sm font-semibold hover:bg-surface2 ${
+                  pathname === "/slides" ? "text-accent" : "text-ink"
+                }`}
+              >
+                Quản lý slide
+              </Link>
 
               <div className="my-2 border-t border-border" />
 
