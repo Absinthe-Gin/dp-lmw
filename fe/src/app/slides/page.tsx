@@ -149,9 +149,7 @@ export default function SlidesAdminPage() {
       <BackButton />
       <div className="mb-6">
         <h1 className="font-display text-2xl font-semibold">Quản lý slide</h1>
-        <p className="mt-1.5 text-sm text-ink-muted">
-          Ảnh hiển thị trong khung trình chiếu ở đầu trang chủ — ai cũng xem được, chỉ quản trị viên mới thêm/xóa.
-        </p>
+        
       </div>
 
       <section className="rounded-xl border border-border bg-surface p-5">

@@ -63,8 +63,23 @@ export default function HomeSlideshow() {
     <section className="mb-8">
       <div className="relative aspect-[16/7] w-full overflow-hidden rounded-xl border border-border bg-surface2 sm:aspect-[16/5]">
         {url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt="" className="h-full w-full object-cover" />
+          <>
+            {/* Blurred, scaled-up copy fills the frame edge-to-edge behind
+                the real image — imported photos come in all sorts of aspect
+                ratios (portrait, square, panorama, ...) that will almost
+                never exactly match this box's fixed 16:7/16:5 shape.
+                object-cover alone would crop whichever dimension overflows;
+                this backdrop trick (blurred cover fill + contain on top)
+                means the actual photo is always shown in full, letterboxed
+                on a soft blurred version of itself instead of hard bars. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={url} alt="" aria-hidden className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl opacity-60" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={url} alt="" className="relative h-full w-full object-contain" />
+            {/* Gradient keeps the dot indicators legible regardless of the
+                photo's own brightness/color at the bottom edge. */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/50 to-transparent" />
+          </>
         )}
         {slides.length > 1 && (
           <div className="absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
