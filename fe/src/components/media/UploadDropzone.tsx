@@ -79,7 +79,7 @@ export default function UploadDropzone() {
         </span>
         <div>
           <p className="font-semibold">Kéo thả tệp vào đây</p>
-          <p className="text-xs text-ink-faint">hoặc bấm để chọn — JPG, PNG, HEIC, MP4, MOV</p>
+          <p className="text-xs text-ink-faint">hoặc bấm để chọn — JPG, PNG, WEBP, HEIC, MP4, MOV</p>
         </div>
         <span className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold">Chọn tệp</span>
         <input
