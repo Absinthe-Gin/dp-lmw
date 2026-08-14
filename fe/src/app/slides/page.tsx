@@ -178,7 +178,13 @@ export default function SlidesAdminPage() {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          // ",.webp" alongside the MIME wildcard: on Windows, the native file
+          // picker's "image/*" filter (and the File object's reported .type)
+          // both come from the OS's registered MIME associations — on a
+          // machine where .webp isn't registered, "image/*" alone can hide
+          // .webp files from the dialog entirely. Listing the extension
+          // explicitly keeps them selectable regardless.
+          accept="image/*,.webp"
           multiple
           hidden
           onChange={(e) => handleFiles(e.target.files)}
@@ -190,7 +196,7 @@ export default function SlidesAdminPage() {
             if (el) el.setAttribute("webkitdirectory", "");
           }}
           type="file"
-          accept="image/*"
+          accept="image/*,.webp"
           multiple
           hidden
           onChange={(e) => handleFiles(e.target.files)}

@@ -16,6 +16,50 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 
 
 export const homeSlidesRouter = Router();
 
+const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tiff", ".avif", ".heic", ".heif"];
+
+// A browser's reported File.type comes from the OS's registered MIME
+// associations — on Windows, a machine that has never had .webp registered
+// (older Windows/no WebP codec pack) reports an empty string or
+// "application/octet-stream" for a genuine .webp file, even though sharp
+// decodes it fine. Falling back to the filename extension when the
+// mimetype is missing/generic avoids rejecting real images purely because
+// of an OS MIME-registration gap — this was reported as "webp doesn't
+// upload" even though the backend always accepted a correctly-labeled
+// image/webp upload (confirmed via curl).
+function isAcceptableImage(file: Express.Multer.File): boolean {
+  if (file.mimetype.startsWith("image/")) return true;
+  if (file.mimetype === "" || file.mimetype === "application/octet-stream") {
+    const lower = file.originalname.toLowerCase();
+    return IMAGE_EXTENSIONS.some((ext) => lower.endsWith(ext));
+  }
+  return false;
+}
+
+const EXTENSION_CONTENT_TYPES: Record<string, string> = {
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+  ".webp": "image/webp",
+  ".gif": "image/gif",
+  ".bmp": "image/bmp",
+  ".tiff": "image/tiff",
+  ".avif": "image/avif",
+  ".heic": "image/heic",
+  ".heif": "image/heif",
+};
+
+// Storage's Content-Type should be a real image/* value (used for the
+// signed URL's response headers), not whatever generic/empty type an
+// under-registered OS reported — fall back to the extension when needed,
+// same gap isAcceptableImage above works around.
+function resolveContentType(file: Express.Multer.File): string {
+  if (file.mimetype.startsWith("image/")) return file.mimetype;
+  const lower = file.originalname.toLowerCase();
+  const ext = IMAGE_EXTENSIONS.find((e) => lower.endsWith(e));
+  return (ext && EXTENSION_CONTENT_TYPES[ext]) || "application/octet-stream";
+}
+
 function toDTO(s: Awaited<ReturnType<typeof db.homeSlide.findFirstOrThrow>>): HomeSlideDTO {
   return {
     id: s.id,
@@ -60,7 +104,7 @@ homeSlidesRouter.post(
     const files = (req.files as Express.Multer.File[] | undefined) ?? [];
     if (!files.length) return res.status(400).json({ error: "Missing files" });
 
-    const nonImage = files.find((f) => !f.mimetype.startsWith("image/"));
+    const nonImage = files.find((f) => !isAcceptableImage(f));
     if (nonImage) {
       return res.status(400).json({ error: `Chỉ chấp nhận ảnh — "${nonImage.originalname}" không phải ảnh` });
     }
@@ -68,7 +112,7 @@ homeSlidesRouter.post(
     const created: HomeSlideDTO[] = [];
     for (const file of files) {
       const key = `home-slides/${randomUUID()}-${file.originalname}`;
-      await uploadObject(key, file.buffer, file.mimetype);
+      await uploadObject(key, file.buffer, resolveContentType(file));
 
       const thumb = await createThumbnail(file.buffer);
       const thumbnailKey = `${key}-thumb.jpg`;
